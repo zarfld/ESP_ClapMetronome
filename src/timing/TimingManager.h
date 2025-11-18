@@ -10,9 +10,9 @@
  * Standard: ISO/IEC/IEEE 12207:2017 (Implementation Process)
  * 
  * TDD Status:
- * - RED: Test written (test_timestamp_query.cpp)
- * - GREEN: Pending implementation
- * - REFACTOR: Pending
+ * - RED: Tests written ✅
+ * - GREEN: Implementation complete ✅
+ * - REFACTOR: Complete ✅
  */
 
 #ifndef TIMING_MANAGER_H
@@ -110,7 +110,14 @@ public:
     const TimingManagerState& getState() const { return state_; }
     
 private:
+    // Constants
+    static constexpr uint8_t RTC_I2C_ADDRESS = 0x68;        ///< RTC3231 I2C address
+    static constexpr uint16_t RTC_ERROR_THRESHOLD = 10;     ///< Max I2C errors before fallback
+    static constexpr uint64_t JITTER_WINDOW_US = 1000000;   ///< Only track jitter for deltas < 1s
+    
     TimingManagerState state_;    ///< Internal state tracking
+    
+    // RTC Management
     
     /**
      * @brief Detect RTC on I2C bus
@@ -118,6 +125,13 @@ private:
      * @return bool True if RTC found at address 0x68
      */
     bool detectRTC();
+    
+    /**
+     * @brief Initialize RTC subsystem after detection
+     * 
+     * @return bool True if initialization successful
+     */
+    bool initRTC();
     
     /**
      * @brief Read timestamp from RTC3231
@@ -135,6 +149,30 @@ private:
      * @brief Switch to fallback timing (micros())
      */
     void enableFallback();
+    
+    // Timestamp Management
+    
+    /**
+     * @brief Get raw platform timestamp without monotonicity guarantee
+     * 
+     * @return uint64_t Raw timestamp in microseconds
+     */
+    uint64_t getRawTimestampUs();
+    
+    /**
+     * @brief Ensure timestamp monotonicity
+     * 
+     * @param current_timestamp Current raw timestamp
+     * @return uint64_t Corrected monotonic timestamp
+     */
+    uint64_t ensureMonotonicity(uint64_t current_timestamp);
+    
+    /**
+     * @brief Update jitter measurement
+     * 
+     * @param current_timestamp Current timestamp
+     */
+    void updateJitter(uint64_t current_timestamp);
 };
 
 #endif // TIMING_MANAGER_H
