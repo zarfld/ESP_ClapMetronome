@@ -53,3 +53,63 @@ target_link_libraries(test_kick_only_filtering PRIVATE
 
 # Register test with CTest
 add_test(NAME KickOnlyFilteringTests COMMAND test_kick_only_filtering)
+
+# Debug test for rise time measurement
+add_executable(test_debug_rise_time
+    test_debug_rise_time.cpp
+    ${AUDIO_SOURCES}
+)
+
+target_include_directories(test_debug_rise_time PRIVATE
+    ../../src/audio
+    ../../src/timing
+    ../../src/events
+    ../../test/mocks
+)
+
+target_link_libraries(test_debug_rise_time PRIVATE
+    GTest::gtest
+    GTest::gtest_main
+)
+
+add_test(NAME DebugRiseTimeTest COMMAND test_debug_rise_time)
+
+# Simple rise time test
+add_executable(test_simple_rise
+    test_simple_rise.cpp
+    ${AUDIO_SOURCES}
+)
+
+target_include_directories(test_simple_rise PRIVATE
+    ../../src/audio
+    ../../src/timing
+    ../../src/events
+    ../../test/mocks
+)
+
+target_link_libraries(test_simple_rise PRIVATE
+    GTest::gtest
+    GTest::gtest_main
+)
+
+add_test(NAME SimpleRiseTimeTest COMMAND test_simple_rise)
+
+# Constants test
+add_executable(test_constants
+    test_constants.cpp
+    ${AUDIO_SOURCES}
+)
+
+target_include_directories(test_constants PRIVATE
+    ../../src/audio
+    ../../src/timing
+    ../../src/events
+    ../../test/mocks
+)
+
+target_link_libraries(test_constants PRIVATE
+    GTest::gtest
+    GTest::gtest_main
+)
+
+add_test(NAME ConstantsTest COMMAND test_constants)

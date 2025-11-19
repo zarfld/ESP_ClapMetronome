@@ -52,32 +52,57 @@ protected:
 
     /**
      * @brief Simulate a beat with controlled rise time
+     * 
+     * IMPORTANT: This matches the algorithm's actual rise time measurement:
+     * - Rise time START = when signal crosses (threshold + margin)
+     * - Rise time END = when signal starts falling (peak detected)
+     * - Measurement = END timestamp - START timestamp
+     * 
+     * The algorithm doesn't measure from baseline; it measures from threshold crossing.
+     * 
      * @param peak_amplitude Peak ADC value (above threshold)
-     * @param rise_time_us Rise time in microseconds
-     * @param samples_during_rise Number of samples during rise (affects waveform shape)
+     * @param rise_time_us Rise time in microseconds (measured from threshold crossing to peak)
      */
-    void simulateBeatWithRiseTime(uint16_t peak_amplitude, uint64_t rise_time_us, size_t samples_during_rise = 5) {
-        // Start with baseline
+    void simulateBeatWithRiseTime(uint16_t peak_amplitude, uint64_t rise_time_us) {
+        // CRITICAL: Use LOW baseline that won't cross threshold
+        // Initial threshold is 50, so 200 ADC is well below threshold + margin (130)
         for (int i = 0; i < 10; ++i) {
-            detector_->processSample(2000);
+            detector_->processSample(200);  // Low baseline
             mockTiming_.advanceTime(1000); // 1ms between samples
         }
 
-        // Rising edge - distribute rise time across samples
-        uint64_t time_per_sample = rise_time_us / samples_during_rise;
-        uint16_t amplitude_step = (peak_amplitude - 2000) / samples_during_rise;
+        // Cross threshold immediately (algorithm records this timestamp as START)
+        // Typical threshold ~2400 + 80 margin = 2480
+        // We use 3000 to ensure we're above threshold + margin
+        detector_->processSample(3000);
+        // NOTE: Time = 0 microseconds from start of rise (this is the reference point)
         
-        for (size_t i = 0; i < samples_during_rise; ++i) {
-            uint16_t current_amplitude = 2000 + (amplitude_step * (i + 1));
-            detector_->processSample(current_amplitude);
-            mockTiming_.advanceTime(time_per_sample);
+        // We need the falling edge to arrive at exactly rise_time_us from threshold crossing
+        // Strategy: Advance time to just before target, emit peak, then emit falling edge
+        
+        if (rise_time_us >= 2000) {
+            // Gradual rise - emit samples incrementally
+            uint64_t rise_ms = rise_time_us / 1000;
+            uint16_t amplitude_per_step = static_cast<uint16_t>((peak_amplitude - 3000) / rise_ms);
+            
+            // Emit rising samples up to rise_ms - 1
+            for (uint64_t ms = 1; ms < rise_ms; ++ms) {
+                mockTiming_.advanceTime(1000);
+                uint16_t current_amplitude = 3000 + static_cast<uint16_t>(amplitude_per_step * ms);
+                detector_->processSample(current_amplitude);
+            }
+            
+            // Emit peak at rise_ms - 1 + 1ms = rise_time_us
+            mockTiming_.advanceTime(1000);
+            detector_->processSample(peak_amplitude);
+        } else {
+            // Fast rise - jump directly to rise_time_us and emit peak
+            mockTiming_.advanceTime(rise_time_us);
+            detector_->processSample(peak_amplitude);
         }
-
-        // Peak hold
-        detector_->processSample(peak_amplitude);
-        mockTiming_.advanceTime(1000);
-
-        // Falling edge
+        
+        // Emit falling edge at the same timestamp as peak (simulates instantaneous fall detection)
+        // The algorithm will use THIS sample's timestamp for rise time calculation
         detector_->processSample(peak_amplitude - 200);
         mockTiming_.advanceTime(1000);
         detector_->processSample(2500);
@@ -97,7 +122,7 @@ protected:
  * Then: kick_only = false (threshold is >, not >=)
  */
 TEST_F(KickOnlyFilteringTest, RiseTime_Exactly4ms_BoundaryCondition) {
-    simulateBeatWithRiseTime(3500, 4000, 4);  // Exactly 4ms, 4 samples
+    simulateBeatWithRiseTime(3500, 4000);  // Exactly 4ms
     
     ASSERT_EQ(1U, beatEvents_.size()) << "Should detect one beat";
     EXPECT_FALSE(beatEvents_[0].kick_only) 
@@ -112,7 +137,7 @@ TEST_F(KickOnlyFilteringTest, RiseTime_Exactly4ms_BoundaryCondition) {
  * Then: kick_only = false
  */
 TEST_F(KickOnlyFilteringTest, RiseTime_3999us_JustBelowThreshold) {
-    simulateBeatWithRiseTime(3500, 3999, 4);
+    simulateBeatWithRiseTime(3500, 3999);
     
     ASSERT_EQ(1U, beatEvents_.size());
     EXPECT_FALSE(beatEvents_[0].kick_only) 
@@ -127,7 +152,7 @@ TEST_F(KickOnlyFilteringTest, RiseTime_3999us_JustBelowThreshold) {
  * Then: kick_only = true
  */
 TEST_F(KickOnlyFilteringTest, RiseTime_4001us_JustAboveThreshold) {
-    simulateBeatWithRiseTime(3500, 4001, 5);
+    simulateBeatWithRiseTime(3500, 4001);
     
     ASSERT_EQ(1U, beatEvents_.size());
     EXPECT_TRUE(beatEvents_[0].kick_only) 
@@ -144,7 +169,7 @@ TEST_F(KickOnlyFilteringTest, RiseTime_4001us_JustAboveThreshold) {
  * Then: kick_only = false (typical clap sound)
  */
 TEST_F(KickOnlyFilteringTest, FastAttack_1ms_ClapSound) {
-    simulateBeatWithRiseTime(3600, 1000, 1);
+    simulateBeatWithRiseTime(3500, 1000);  // 1ms rise = clap
     
     ASSERT_EQ(1U, beatEvents_.size());
     EXPECT_FALSE(beatEvents_[0].kick_only) 
@@ -159,7 +184,7 @@ TEST_F(KickOnlyFilteringTest, FastAttack_1ms_ClapSound) {
  * Then: kick_only = false (typical snare sound)
  */
 TEST_F(KickOnlyFilteringTest, FastAttack_2ms_SnareSound) {
-    simulateBeatWithRiseTime(3400, 2000, 2);
+    simulateBeatWithRiseTime(3400, 2000);
     
     ASSERT_EQ(1U, beatEvents_.size());
     EXPECT_FALSE(beatEvents_[0].kick_only) 
@@ -174,7 +199,7 @@ TEST_F(KickOnlyFilteringTest, FastAttack_2ms_SnareSound) {
  * Then: kick_only = false (typical hi-hat/cymbal)
  */
 TEST_F(KickOnlyFilteringTest, FastAttack_3ms_HiHatSound) {
-    simulateBeatWithRiseTime(3200, 3000, 3);
+    simulateBeatWithRiseTime(3200, 3000);
     
     ASSERT_EQ(1U, beatEvents_.size());
     EXPECT_FALSE(beatEvents_[0].kick_only) 
@@ -191,7 +216,7 @@ TEST_F(KickOnlyFilteringTest, FastAttack_3ms_HiHatSound) {
  * Then: kick_only = true (typical kick drum)
  */
 TEST_F(KickOnlyFilteringTest, SlowAttack_5ms_KickDrum) {
-    simulateBeatWithRiseTime(3700, 5000, 5);
+    simulateBeatWithRiseTime(3700, 5000);
     
     ASSERT_EQ(1U, beatEvents_.size());
     EXPECT_TRUE(beatEvents_[0].kick_only) 
@@ -206,7 +231,7 @@ TEST_F(KickOnlyFilteringTest, SlowAttack_5ms_KickDrum) {
  * Then: kick_only = true (deep/bass kick drum)
  */
 TEST_F(KickOnlyFilteringTest, SlowAttack_8ms_DeepKickDrum) {
-    simulateBeatWithRiseTime(3800, 8000, 8);
+    simulateBeatWithRiseTime(3800, 8000);
     
     ASSERT_EQ(1U, beatEvents_.size());
     EXPECT_TRUE(beatEvents_[0].kick_only) 
@@ -221,7 +246,7 @@ TEST_F(KickOnlyFilteringTest, SlowAttack_8ms_DeepKickDrum) {
  * Then: kick_only = true (sub-kick/floor tom)
  */
 TEST_F(KickOnlyFilteringTest, SlowAttack_10ms_SubKickDrum) {
-    simulateBeatWithRiseTime(3600, 10000, 10);
+    simulateBeatWithRiseTime(3600, 10000);
     
     ASSERT_EQ(1U, beatEvents_.size());
     EXPECT_TRUE(beatEvents_[0].kick_only) 
@@ -238,7 +263,7 @@ TEST_F(KickOnlyFilteringTest, SlowAttack_10ms_SubKickDrum) {
  * Then: kick_only = true (rise time matters, not amplitude)
  */
 TEST_F(KickOnlyFilteringTest, WeakKick_LowAmplitude_SlowRise) {
-    simulateBeatWithRiseTime(2800, 6000, 6);
+    simulateBeatWithRiseTime(2800, 6000);
     
     ASSERT_EQ(1U, beatEvents_.size());
     EXPECT_TRUE(beatEvents_[0].kick_only) 
@@ -253,7 +278,7 @@ TEST_F(KickOnlyFilteringTest, WeakKick_LowAmplitude_SlowRise) {
  * Then: kick_only = false (amplitude doesn't override fast rise time)
  */
 TEST_F(KickOnlyFilteringTest, LoudClap_HighAmplitude_FastRise) {
-    simulateBeatWithRiseTime(3900, 1000, 1);
+    simulateBeatWithRiseTime(3900, 1000);
     
     ASSERT_EQ(1U, beatEvents_.size());
     EXPECT_FALSE(beatEvents_[0].kick_only) 
@@ -271,27 +296,27 @@ TEST_F(KickOnlyFilteringTest, LoudClap_HighAmplitude_FastRise) {
  */
 TEST_F(KickOnlyFilteringTest, MixedSequence_KicksAndClaps) {
     // Kick 1: 6ms rise time
-    simulateBeatWithRiseTime(3500, 6000, 6);
+    simulateBeatWithRiseTime(3500, 6000);
     mockTiming_.advanceTime(60000);  // 60ms gap (> debounce)
     
     // Clap 1: 2ms rise time
-    simulateBeatWithRiseTime(3600, 2000, 2);
+    simulateBeatWithRiseTime(3600, 2000);
     mockTiming_.advanceTime(60000);
     
     // Kick 2: 7ms rise time
-    simulateBeatWithRiseTime(3400, 7000, 7);
+    simulateBeatWithRiseTime(3400, 7000);
     mockTiming_.advanceTime(60000);
     
     // Clap 2: 1ms rise time
-    simulateBeatWithRiseTime(3700, 1000, 1);
+    simulateBeatWithRiseTime(3700, 1000);
     mockTiming_.advanceTime(60000);
     
     // Kick 3: 5ms rise time
-    simulateBeatWithRiseTime(3300, 5000, 5);
+    simulateBeatWithRiseTime(3300, 5000);
     mockTiming_.advanceTime(60000);
     
     // Clap 3: 3ms rise time
-    simulateBeatWithRiseTime(3800, 3000, 3);
+    simulateBeatWithRiseTime(3800, 3000);
     
     ASSERT_EQ(6U, beatEvents_.size()) << "Should detect all 6 beats";
     
@@ -343,7 +368,7 @@ TEST_F(KickOnlyFilteringTest, VeryFastAttack_0_5ms_InstantaneousClap) {
  * Then: kick_only = true
  */
 TEST_F(KickOnlyFilteringTest, VerySlow_20ms_RoomResonance) {
-    simulateBeatWithRiseTime(3400, 20000, 20);
+    simulateBeatWithRiseTime(3400, 20000);
     
     ASSERT_EQ(1U, beatEvents_.size());
     EXPECT_TRUE(beatEvents_[0].kick_only) 
