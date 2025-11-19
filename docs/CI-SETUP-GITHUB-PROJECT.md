@@ -35,22 +35,31 @@ GitHub Projects API v2 requires manual setup via UI.
    ```
 6. Click **"Create project"**
 
-### 1.2 Add Custom Fields
+### 1.2 Custom Fields (Optional - Visual Organization Only)
 
-Add these custom fields (click "+" next to field names):
+⚠️ **IMPORTANT**: Project custom fields are **optional** for visual organization. The CI workflows **do NOT use Project fields** - they query data directly from **GitHub Issue bodies** via the Issue Templates (`.github/ISSUE_TEMPLATE/*.yml`).
 
-| Field Name | Type | Options/Description |
-|------------|------|---------------------|
-| **Requirement Type** | Single Select | StR, REQ-F, REQ-NF, ADR, ARC-C, QA-SC, TEST |
-| **Phase** | Single Select | Phase 01-09 (use lifecycle phase names) |
-| **Priority** | Single Select | P0 (Critical), P1 (High), P2 (Medium), P3 (Low) |
-| **Integrity Level** | Single Select | Level 1-4 (IEEE 1012-2016) |
-| **Verification Method** | Single Select | Inspection, Analysis, Demonstration, Test |
-| **Upstream Link** | Text | Parent issue number(s): `#123` or `#123, #124` |
-| **Downstream Links** | Text | Child issue numbers: `#125, #126` |
-| **Acceptance Criteria Met** | Checkbox | Default: unchecked |
-| **Verified** | Checkbox | Default: unchecked |
-| **Implemented** | Checkbox | Default: unchecked |
+**Data Flow**:
+```
+Issue Templates (.github/ISSUE_TEMPLATE/*.yml)
+    ↓ User fills form fields
+GitHub Issue Body (structured text)
+    ↓ CI workflows use PyGithub API
+Dynamic Validation (scripts/github-*.py)
+```
+
+**If you want visual Project board organization**, you can optionally add these custom fields:
+
+| Field Name | Type | Notes |
+|------------|------|-------|
+| **Status** | Status | Built-in (Todo/In Progress/Done) |
+| **Priority** | Single Select | P0-P3 (also in issue labels) |
+| **Phase** | Single Select | Phase 01-09 (also in issue labels) |
+
+**Skip custom fields if**:
+- You only need CI validation (labels + issue body text are sufficient)
+- You prefer using GitHub labels for filtering
+- You want minimal setup
 
 ### 1.3 Configure Views
 
