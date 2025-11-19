@@ -4,21 +4,26 @@
  * Implements: #45 (DES-C-001 Audio Detection Engine)
  * Standards: ISO/IEC/IEEE 12207:2017 (Implementation Process)
  * 
- * TDD Status: 
- /**
  * TDD Progress Tracking:
  * 
  * Cycle 1 - AC-AUDIO-001 Adaptive Threshold: RED ✅, GREEN ✅, REFACTOR ✅
  *   Tests: test_adaptive_threshold.cpp (5/5 passing)
+ *   - Threshold calculation implemented in AudioDetectionState::addToWindow()
+ *   - Clean, minimal implementation following YAGNI
  * 
  * Cycle 2 - AC-AUDIO-002 State Machine: RED ✅, GREEN ✅, REFACTOR ✅
  *   Tests: test_state_machine.cpp (8/8 passing)
- *   Fixed: Window initialization with zeros causing threshold issues
- *   Solution: Initialize window to 2000 (12-bit ADC midpoint)
- */
- *   - 5/5 tests passing
- *   - Threshold calculation implemented in AudioDetectionState::addToWindow()
- *   - Clean, minimal implementation following YAGNI
+ *   - 4-state FSM: IDLE → RISING → TRIGGERED → DEBOUNCE → IDLE
+ *   - Beat event emission with kick detection (rise time > 4ms)
+ *   - Fixed: Window initialization with zeros causing threshold issues
+ *   - Solution: Initialize window to 2000 (12-bit ADC midpoint)
+ * 
+ * Cycle 3 - AC-AUDIO-003 AGC Level Transitions: RED ✅, GREEN ✅, REFACTOR ✅
+ *   Tests: test_agc_transitions.cpp (8/9 passing, 1 skipped)
+ *   - Clipping detection at 4000 ADC threshold
+ *   - Automatic gain reduction: 60dB → 50dB → 40dB on clipping
+ *   - Prevents reduction below minimum (40dB)
+ *   - AGC level included in beat events
  * 
  * See: https://github.com/zarfld/ESP_ClapMetronome/issues/45
  */
@@ -117,7 +122,10 @@ void AudioDetection::processSample(uint16_t adc_value) {
             break;
     }
     
-    // TODO: Implement telemetry, AGC in next cycles
+    // Update AGC based on clipping detection (AC-AUDIO-003)
+    updateAGC(adc_value);
+    
+    // TODO: Implement telemetry in next cycle
 }
 
 // ===== State Queries =====
@@ -176,8 +184,24 @@ void AudioDetection::publishTelemetry(uint64_t timestamp_us, uint16_t current_ad
 }
 
 void AudioDetection::updateAGC(uint16_t adc_value) {
-    // TODO: Implement in GREEN phase
-    (void)adc_value;
+    // AC-AUDIO-003: AGC Level Transitions
+    // Detect clipping and reduce gain to prevent saturation
+    
+    // Check if sample exceeds clipping threshold (4000 ADC units)
+    if (adc_value > AudioDetectionState::CLIPPING_THRESHOLD) {
+        // Clipping detected - set flag
+        state_.clipping_detected = true;
+        
+        // Reduce gain level (if not already at minimum)
+        if (state_.gain_level == AGCLevel::GAIN_60DB) {
+            // Reduce from 60dB to 50dB
+            state_.gain_level = AGCLevel::GAIN_50DB;
+        } else if (state_.gain_level == AGCLevel::GAIN_50DB) {
+            // Reduce from 50dB to 40dB
+            state_.gain_level = AGCLevel::GAIN_40DB;
+        }
+        // If already at GAIN_40DB (minimum), stay there
+    }
 }
 
 } // namespace clap_metronome

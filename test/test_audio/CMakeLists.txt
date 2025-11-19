@@ -85,9 +85,24 @@ target_link_libraries(test_state_machine PRIVATE
 
 add_test(NAME StateMachineTests COMMAND test_state_machine)
 
+# ===== Test Executable 3: AGC Transitions Tests =====
+add_executable(test_agc_transitions
+    test_agc_transitions.cpp
+    ${AUDIO_SOURCES}
+)
+
+target_include_directories(test_agc_transitions PRIVATE
+    ${AUDIO_INCLUDE_DIRS}
+)
+
+target_link_libraries(test_agc_transitions PRIVATE
+    GTest::gtest
+    GTest::gtest_main
+)
+
+add_test(NAME AGCTransitionsTests COMMAND test_agc_transitions)
+
 # ===== Future Test Executables (to be added in subsequent TDD cycles) =====
-# Test Cycle 3: AGC Tests
-# add_executable(test_agc ...)
 # Test Cycle 4: Beat Event Tests
 # add_executable(test_beat_events ...)
 # Test Cycle 5: Debounce Tests
@@ -99,5 +114,5 @@ add_test(NAME StateMachineTests COMMAND test_state_machine)
 message(STATUS "Audio Detection Tests Configuration:")
 message(STATUS "  - C++ Standard: ${CMAKE_CXX_STANDARD}")
 message(STATUS "  - Build Type: ${CMAKE_BUILD_TYPE}")
-message(STATUS "  - Test Executables: test_adaptive_threshold, test_state_machine")
+message(STATUS "  - Test Executables: test_adaptive_threshold, test_state_machine, test_agc_transitions")
 message(STATUS "  - GoogleTest: v1.14.0")
