@@ -113,7 +113,12 @@ struct AudioDetectionState {
         rising_edge_peak_value = 0;
         last_telemetry_us = 0;
         window_index = 0;
-        std::memset(window_samples, 0, sizeof(window_samples));
+        // Initialize window with midpoint value to avoid zero-induced threshold issues
+        // With zeros, first samples cause incorrect min/max calculations
+        // Using 2000 (midpoint of 0-4095 12-bit ADC range) provides stable baseline
+        for (size_t i = 0; i < WINDOW_SIZE; i++) {
+            window_samples[i] = 2000;
+        }
     }
     
     /**

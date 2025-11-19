@@ -68,9 +68,24 @@ target_link_libraries(test_adaptive_threshold PRIVATE
 # Register with CTest
 add_test(NAME AdaptiveThresholdTests COMMAND test_adaptive_threshold)
 
+# ===== Test Executable 2: State Machine Tests =====
+add_executable(test_state_machine
+    test_state_machine.cpp
+    ${AUDIO_SOURCES}
+)
+
+target_include_directories(test_state_machine PRIVATE
+    ${AUDIO_INCLUDE_DIRS}
+)
+
+target_link_libraries(test_state_machine PRIVATE
+    GTest::gtest
+    GTest::gtest_main
+)
+
+add_test(NAME StateMachineTests COMMAND test_state_machine)
+
 # ===== Future Test Executables (to be added in subsequent TDD cycles) =====
-# Test Cycle 2: State Machine Tests
-# add_executable(test_state_machine ...)
 # Test Cycle 3: AGC Tests
 # add_executable(test_agc ...)
 # Test Cycle 4: Beat Event Tests
@@ -84,5 +99,5 @@ add_test(NAME AdaptiveThresholdTests COMMAND test_adaptive_threshold)
 message(STATUS "Audio Detection Tests Configuration:")
 message(STATUS "  - C++ Standard: ${CMAKE_CXX_STANDARD}")
 message(STATUS "  - Build Type: ${CMAKE_BUILD_TYPE}")
-message(STATUS "  - Test Executables: test_adaptive_threshold")
+message(STATUS "  - Test Executables: test_adaptive_threshold, test_state_machine")
 message(STATUS "  - GoogleTest: v1.14.0")
