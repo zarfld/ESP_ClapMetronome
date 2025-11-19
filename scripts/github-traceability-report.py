@@ -171,20 +171,21 @@ def get_requirement_type(title: str, labels: List[str]) -> str:
     
     # Fallback: check labels for type information
     label_map = {
+        # Type labels (colon-separated as they exist in GitHub)
         'type:stakeholder-requirement': 'StR',
-        'type:requirement-functional': 'REQ-F',
-        'type:requirement-non-functional': 'REQ-NF',
-        'type:architecture-decision': 'ADR',
-        'type:architecture-component': 'ARC-C',
-        'type:quality-scenario': 'QA-SC',
+        'type:requirement:functional': 'REQ-F',
+        'type:requirement:non-functional': 'REQ-NF',
+        'type:architecture:decision': 'ADR',
+        'type:architecture:component': 'ARC-C',
+        'type:architecture:quality-scenario': 'QA-SC',
         'type:test-case': 'TEST',
         'type:test-plan': 'TEST-PLAN',
-        'phase-01-stakeholder-requirements': 'StR',
-        'phase-01-stakeholder': 'StR',
-        'phase-02-requirements': 'REQ',
-        'phase-03-architecture': 'ARCH',
-        'phase-04-design': 'DESIGN',
-        'phase-07-verification-validation': 'TEST',
+        # Phase labels (colon after "phase" as they exist in GitHub)
+        'phase:01-stakeholder-requirements': 'StR',
+        'phase:02-requirements': 'REQ',
+        'phase:03-architecture': 'ARCH',
+        'phase:04-design': 'DESIGN',
+        'phase:07-verification-validation': 'TEST',
     }
     
     for label in labels:
