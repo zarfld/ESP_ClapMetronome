@@ -19,8 +19,11 @@ env:
 
 jobs:
   spec-validation:
-    name: Spec Structure Validation (Schema & Traceability Prereq)
+    name: GitHub Issues Structure Validation (Requirements & Traceability)
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: read
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -29,17 +32,32 @@ jobs:
         with:
           python-version: "3.11"
       - name: Install dependencies
-        run: pip install pyyaml jsonschema
-      - name: Validate spec structure
+        run: pip install requests pyyaml PyGithub
+      - name: Validate GitHub Issues structure
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          ALLOW_EMPTY_SPECS=1 python scripts/validate-spec-structure.py || {
-            echo '❌ Spec structure validation failed.'
+          echo "🔍 Validating GitHub Issues-based requirements structure..."
+          python scripts/github-traceability-report.py > /tmp/traceability-check.md
+          
+          # Check if any requirements were found
+          if grep -q "Total requirements: \*\*0\*\*" /tmp/traceability-check.md; then
+            echo "❌ No requirements found in GitHub Issues!"
+            echo "Expected issues with labels: phase:02-requirements, phase:03-architecture, etc."
+            echo "See docs/QUICK-START-github-issues.md for issue creation guidance"
+            cat /tmp/traceability-check.md
             exit 1
-          }
-  spec-generation:
+          fi
+          
+          echo "✅ GitHub Issues requirements structure validated"
+          grep "Total requirements:" /tmp/traceability-check.md || echo "Summary not found in report"
+  github-issues-traceability:
     needs: [spec-validation]
-    name: Spec Artifact Generation (Index, Trace JSON, Test Skeletons)
+    name: GitHub Issues Traceability Report Generation
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: read
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -47,26 +65,31 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Generate spec index
+      - name: Install dependencies
+        run: pip install requests pyyaml PyGithub
+      - name: Generate traceability report from GitHub Issues
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          ALLOW_EMPTY_SPECS=1 python scripts/generators/spec_parser.py
-      - name: Build traceability JSON
+          mkdir -p reports
+          echo "📊 Generating GitHub Issues traceability report..."
+          python scripts/github-traceability-report.py > reports/traceability-report.md
+          cat reports/traceability-report.md
+      - name: Check for orphaned requirements
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          ALLOW_EMPTY_SPECS=1 python scripts/generators/build_trace_json.py
-      - name: Generate requirement test skeletons
-        run: |
-          ALLOW_EMPTY_SPECS=1 python scripts/generators/gen_tests.py
-      - name: Upload generated artifacts
+          echo "🔍 Checking for orphaned requirements..."
+          python scripts/github-orphan-check.py || echo "⚠️ Orphan check completed with warnings"
+        continue-on-error: true
+      - name: Upload traceability report
         uses: actions/upload-artifact@v4
         with:
-          name: spec-generated-artifacts
-          path: |
-            build/spec-index.json
-            build/traceability.json
-            05-implementation/tests/generated/
+          name: github-issues-traceability-report
+          path: reports/traceability-report.md
   # Phase 05: Implementation Quality Checks
   code-quality:
-    needs: [spec-generation]
+    needs: [github-issues-traceability]
     name: Code Quality & Standards (IEEE 1016, XP Practices)
     runs-on: ubuntu-latest
 
@@ -144,7 +167,7 @@ jobs:
 
   traceability-coverage:
     name: Traceability Coverage Enforcement
-    needs: [spec-generation]
+    needs: [github-issues-traceability]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -164,7 +187,7 @@ jobs:
 
   integrity-scan:
     name: Integrity Level Scan
-    needs: [spec-generation]
+    needs: [github-issues-traceability]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
