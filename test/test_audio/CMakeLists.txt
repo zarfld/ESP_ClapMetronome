@@ -238,6 +238,23 @@ target_link_libraries(test_clipping_integration PRIVATE
 
 add_test(NAME ClippingIntegrationTests COMMAND test_clipping_integration)
 
+# ===== Test Executable 12: Noise Rejection Tests =====
+add_executable(test_noise_rejection
+    test_noise_rejection.cpp
+    ${AUDIO_SOURCES}
+)
+
+target_include_directories(test_noise_rejection PRIVATE
+    ${AUDIO_INCLUDE_DIRS}
+)
+
+target_link_libraries(test_noise_rejection PRIVATE
+    GTest::gtest
+    GTest::gtest_main
+)
+
+add_test(NAME NoiseRejectionTests COMMAND test_noise_rejection)
+
 # ===== Future Test Executables (to be added in subsequent TDD cycles) =====
 # Test Cycle 6: Kick Detection Tests
 # add_executable(test_kick_detection ...)
@@ -246,5 +263,5 @@ add_test(NAME ClippingIntegrationTests COMMAND test_clipping_integration)
 message(STATUS "Audio Detection Tests Configuration:")
 message(STATUS "  - C++ Standard: ${CMAKE_CXX_STANDARD}")
 message(STATUS "  - Build Type: ${CMAKE_BUILD_TYPE}")
-message(STATUS "  - Test Executables: 11 test suites (adaptive_threshold, state_machine, agc_transitions, beat_event_emission, debounce_period, telemetry_updates, audio_latency, detection_accuracy, cpu_usage, memory_usage, clipping_integration)")
+message(STATUS "  - Test Executables: 12 test suites (adaptive_threshold, state_machine, agc_transitions, beat_event_emission, debounce_period, telemetry_updates, audio_latency, detection_accuracy, cpu_usage, memory_usage, clipping_integration, noise_rejection)")
 message(STATUS "  - GoogleTest: v1.14.0")
