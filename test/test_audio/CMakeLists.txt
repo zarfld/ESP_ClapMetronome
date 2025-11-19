@@ -255,6 +255,23 @@ target_link_libraries(test_noise_rejection PRIVATE
 
 add_test(NAME NoiseRejectionTests COMMAND test_noise_rejection)
 
+# ===== Test Executable 13: Window Synchronization Tests =====
+add_executable(test_window_synchronization
+    test_window_synchronization.cpp
+    ${AUDIO_SOURCES}
+)
+
+target_include_directories(test_window_synchronization PRIVATE
+    ${AUDIO_INCLUDE_DIRS}
+)
+
+target_link_libraries(test_window_synchronization PRIVATE
+    GTest::gtest
+    GTest::gtest_main
+)
+
+add_test(NAME WindowSynchronizationTests COMMAND test_window_synchronization)
+
 # ===== Future Test Executables (to be added in subsequent TDD cycles) =====
 # Test Cycle 6: Kick Detection Tests
 # add_executable(test_kick_detection ...)
@@ -263,5 +280,5 @@ add_test(NAME NoiseRejectionTests COMMAND test_noise_rejection)
 message(STATUS "Audio Detection Tests Configuration:")
 message(STATUS "  - C++ Standard: ${CMAKE_CXX_STANDARD}")
 message(STATUS "  - Build Type: ${CMAKE_BUILD_TYPE}")
-message(STATUS "  - Test Executables: 12 test suites (adaptive_threshold, state_machine, agc_transitions, beat_event_emission, debounce_period, telemetry_updates, audio_latency, detection_accuracy, cpu_usage, memory_usage, clipping_integration, noise_rejection)")
+message(STATUS "  - Test Executables: 13 test suites (adaptive_threshold, state_machine, agc_transitions, beat_event_emission, debounce_period, telemetry_updates, audio_latency, detection_accuracy, cpu_usage, memory_usage, clipping_integration, noise_rejection, window_synchronization)")
 message(STATUS "  - GoogleTest: v1.14.0")
