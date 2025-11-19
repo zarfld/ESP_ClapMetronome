@@ -606,3 +606,8 @@ TEST_F(NoiseRejectionTest, StressTest_ExtendedNoiseSequence) {
     EXPECT_LT(falsePositiveRate, 5.0)
         << "Extended noise sequence should produce minimal false positives";
 }
+
+int main(int argc, char** argv) {
+    ::testing::InitGoogleTest(&argc, argv);
+    return RUN_ALL_TESTS();
+}
