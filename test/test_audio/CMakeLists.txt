@@ -119,9 +119,24 @@ target_link_libraries(test_beat_event_emission PRIVATE
 
 add_test(NAME BeatEventEmissionTests COMMAND test_beat_event_emission)
 
+# ===== Test Executable 5: Debounce Period Tests =====
+add_executable(test_debounce_period
+    test_debounce_period.cpp
+    ${AUDIO_SOURCES}
+)
+
+target_include_directories(test_debounce_period PRIVATE
+    ${AUDIO_INCLUDE_DIRS}
+)
+
+target_link_libraries(test_debounce_period PRIVATE
+    GTest::gtest
+    GTest::gtest_main
+)
+
+add_test(NAME DebouncePeriodTests COMMAND test_debounce_period)
+
 # ===== Future Test Executables (to be added in subsequent TDD cycles) =====
-# Test Cycle 5: Debounce Tests
-# add_executable(test_debounce ...)
 # Test Cycle 6: Kick Detection Tests
 # add_executable(test_kick_detection ...)
 
@@ -129,5 +144,5 @@ add_test(NAME BeatEventEmissionTests COMMAND test_beat_event_emission)
 message(STATUS "Audio Detection Tests Configuration:")
 message(STATUS "  - C++ Standard: ${CMAKE_CXX_STANDARD}")
 message(STATUS "  - Build Type: ${CMAKE_BUILD_TYPE}")
-message(STATUS "  - Test Executables: test_adaptive_threshold, test_state_machine, test_agc_transitions, test_beat_event_emission")
+message(STATUS "  - Test Executables: test_adaptive_threshold, test_state_machine, test_agc_transitions, test_beat_event_emission, test_debounce_period")
 message(STATUS "  - GoogleTest: v1.14.0")

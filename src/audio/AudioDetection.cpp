@@ -35,6 +35,17 @@
  *   - Kick-only flag (rise_time > 4ms)
  *   - Multiple beats, callback replacement, debounce validation
  * 
+ * Cycle 5 - AC-AUDIO-005 Debounce Period: VALIDATION ✅ (already implemented in Cycle 2)
+ *   Tests: test_debounce_period.cpp (12/12 passing)
+ *   - 50ms debounce period constant verification
+ *   - No beats detected during 50ms window
+ *   - State remains DEBOUNCE for full period
+ *   - Transition to IDLE after 50ms
+ *   - Boundary conditions (49ms vs 50ms)
+ *   - Multiple beats with proper spacing (>50ms)
+ *   - False positive prevention in noisy signals
+ *   - Per-beat independent debounce windows
+ * 
  * See: https://github.com/zarfld/ESP_ClapMetronome/issues/45
  */
 
