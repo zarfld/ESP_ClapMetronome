@@ -142,7 +142,26 @@ def discover_targets(explicit: list[str]) -> list[pathlib.Path]:
         '03-architecture/**/*.md',
     ]:
         candidates.extend(ROOT.glob(pattern))
-    return [c for c in candidates if c.is_file()]
+    
+    # Exclude legacy artifact files (now using GitHub Issues for requirements/traceability)
+    exclude_patterns = [
+        'ARCHITECTURE-PHASE-03-OUTPUT.md',
+        'ARCHITECTURE-SUMMARY.md',
+        'GITHUB-ISSUE-BODIES-COMPLETE.md',
+        'PHASE-04-COMPLETION-SUMMARY.md',
+        'phase-04-traceability-matrix.md',
+        'tdd-plan-phase-05.md',
+        'DAY-01-AFTERNOON-SUMMARY.md',
+        'implementation-log.md',
+        'PHASE-04-TO-05-TRANSITION-COMPLETE.md',
+        'PHASE-05-KICKOFF.md',
+        'TDD-CYCLE-',  # Match all TDD cycle logs
+        'WAVE-',  # Match all wave completion logs
+    ]
+    
+    return [c for c in candidates 
+            if c.is_file() 
+            and not any(pattern in c.name for pattern in exclude_patterns)]
 
 
 def main(argv: list[str]) -> int:
