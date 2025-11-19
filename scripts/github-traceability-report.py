@@ -210,7 +210,7 @@ def generate_matrix():
     state_counts = defaultdict(int)
     for issue in issues:
         labels = [label['name'] for label in issue['labels']]
-        req_type = get_requirement_type(issue['title'], labels)
+        req_type = get_requirement_type(labels)
         type_counts[req_type] += 1
         state_counts[issue['state']] += 1
     
@@ -228,7 +228,7 @@ def generate_matrix():
     
     for issue in sorted(issues, key=lambda x: x['number']):
         labels = [label['name'] for label in issue['labels']]
-        req_type = get_requirement_type(issue['title'], labels)
+        req_type = get_requirement_type(labels)
         links = extract_links(issue.get('body', ''))
         
         # Format link lists
@@ -252,7 +252,7 @@ def generate_matrix():
     orphans = []
     for issue in issues:
         labels = [label['name'] for label in issue['labels']]
-        req_type = get_requirement_type(issue['title'], labels)
+        req_type = get_requirement_type(labels)
         links = extract_links(issue.get('body', ''))
         
         # StR issues should not have parent links
@@ -287,7 +287,7 @@ def generate_matrix():
     unverified = []
     for issue in issues:
         labels = [label['name'] for label in issue['labels']]
-        req_type = get_requirement_type(issue['title'], labels)
+        req_type = get_requirement_type(labels)
         
         if req_type in ['REQ-F', 'REQ-NF']:
             if issue['number'] not in verified_reqs:
