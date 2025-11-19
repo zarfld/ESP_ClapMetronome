@@ -136,13 +136,83 @@ target_link_libraries(test_debounce_period PRIVATE
 
 add_test(NAME DebouncePeriodTests COMMAND test_debounce_period)
 
+# ===== Test Executable 6: Telemetry Updates Tests =====
+add_executable(test_telemetry_updates
+    test_telemetry_updates.cpp
+    ${AUDIO_SOURCES}
+)
+
+target_include_directories(test_telemetry_updates PRIVATE
+    ${AUDIO_INCLUDE_DIRS}
+)
+
+target_link_libraries(test_telemetry_updates PRIVATE
+    GTest::gtest
+    GTest::gtest_main
+)
+
+add_test(NAME TelemetryUpdatesTests COMMAND test_telemetry_updates)
+
+# ===== Test Executable 7: Audio Latency Tests =====
+add_executable(test_audio_latency
+    test_audio_latency.cpp
+    ${AUDIO_SOURCES}
+)
+
+target_include_directories(test_audio_latency PRIVATE
+    ${AUDIO_INCLUDE_DIRS}
+)
+
+target_link_libraries(test_audio_latency PRIVATE
+    GTest::gtest
+    GTest::gtest_main
+)
+
+add_test(NAME AudioLatencyTests COMMAND test_audio_latency)
+
+# ===== Test Executable 8: Detection Accuracy Tests =====
+add_executable(test_detection_accuracy
+    test_detection_accuracy.cpp
+    ${AUDIO_SOURCES}
+)
+
+target_include_directories(test_detection_accuracy PRIVATE
+    ${AUDIO_INCLUDE_DIRS}
+)
+
+target_link_libraries(test_detection_accuracy PRIVATE
+    GTest::gtest
+    GTest::gtest_main
+)
+
+add_test(NAME DetectionAccuracyTests COMMAND test_detection_accuracy)
+
+# ===== Test Executable 9: CPU Usage Tests =====
+add_executable(test_cpu_usage
+    test_cpu_usage.cpp
+    ${AUDIO_SOURCES}
+)
+
+target_include_directories(test_cpu_usage PRIVATE
+    ${AUDIO_INCLUDE_DIRS}
+)
+
+target_link_libraries(test_cpu_usage PRIVATE
+    GTest::gtest
+    GTest::gtest_main
+)
+
+add_test(NAME CPUUsageTests COMMAND test_cpu_usage)
+
 # ===== Future Test Executables (to be added in subsequent TDD cycles) =====
 # Test Cycle 6: Kick Detection Tests
 # add_executable(test_kick_detection ...)
+# Test Cycle 11: Memory Usage Tests
+# add_executable(test_memory_usage ...)
 
 # Build output
 message(STATUS "Audio Detection Tests Configuration:")
 message(STATUS "  - C++ Standard: ${CMAKE_CXX_STANDARD}")
 message(STATUS "  - Build Type: ${CMAKE_BUILD_TYPE}")
-message(STATUS "  - Test Executables: test_adaptive_threshold, test_state_machine, test_agc_transitions, test_beat_event_emission, test_debounce_period")
+message(STATUS "  - Test Executables: 9 test suites (adaptive_threshold, state_machine, agc_transitions, beat_event_emission, debounce_period, telemetry_updates, audio_latency, detection_accuracy, cpu_usage)")
 message(STATUS "  - GoogleTest: v1.14.0")
