@@ -87,6 +87,9 @@ struct AudioDetectionState {
     static constexpr size_t WINDOW_SIZE = 64;  ///< Samples for min/max tracking (from legacy code)
     uint16_t window_samples[WINDOW_SIZE];      ///< Rolling window of recent samples
     uint8_t  window_index;                     ///< Current write position in window
+    uint16_t noise_floor;                      ///< Estimated noise floor (for false positive rejection)
+    uint8_t  samples_since_noise_update;       ///< Counter for noise floor recalculation
+    static constexpr uint8_t NOISE_UPDATE_INTERVAL = 16; ///< Recalculate noise floor every N samples
     
     // Constants for detection algorithm
     static constexpr uint16_t CLIPPING_THRESHOLD = 4000;  ///< ADC value indicating clipping (12-bit max = 4095)
@@ -94,6 +97,8 @@ struct AudioDetectionState {
     static constexpr uint64_t TELEMETRY_INTERVAL_US = 500000; ///< 500ms telemetry (AC-AUDIO-007)
     static constexpr uint64_t KICK_RISE_TIME_US = 4000;   ///< 4ms rise time for kick detection (AC-AUDIO-006)
     static constexpr float    THRESHOLD_FACTOR = 0.8f;    ///< Adaptive threshold factor (AC-AUDIO-001)
+    static constexpr uint16_t THRESHOLD_MARGIN = 80;      ///< Hysteresis margin above threshold (AC-AUDIO-009)
+    static constexpr uint16_t MIN_SIGNAL_AMPLITUDE = 200; ///< Minimum signal amplitude for valid beat (AC-AUDIO-009)
     
     /**
      * Initialize state to defaults
@@ -113,6 +118,8 @@ struct AudioDetectionState {
         rising_edge_peak_value = 0;
         last_telemetry_us = 0;
         window_index = 0;
+        noise_floor = 100;  // Initial noise floor estimate
+        samples_since_noise_update = 0;
         // Initialize window with midpoint value to avoid zero-induced threshold issues
         // With zeros, first samples cause incorrect min/max calculations
         // Using 2000 (midpoint of 0-4095 12-bit ADC range) provides stable baseline
@@ -122,14 +129,70 @@ struct AudioDetectionState {
     }
     
     /**
-     * Update adaptive threshold (AC-AUDIO-001)
-     * Formula: threshold = 0.8 × (max - min) + min
+     * Update adaptive threshold (AC-AUDIO-001, AC-AUDIO-009)
+     * Formula: threshold = max(0.8 × (max - min) + min, noise_floor + margin)
+     * Enhanced with noise floor estimation for false positive rejection
      */
     void updateThreshold() {
         if (max_value > min_value) {
             float range = static_cast<float>(max_value - min_value);
-            threshold = static_cast<uint16_t>(THRESHOLD_FACTOR * range + min_value);
+            uint16_t adaptive_threshold = static_cast<uint16_t>(THRESHOLD_FACTOR * range + min_value);
+            
+            // Periodically update noise floor (cached for performance)
+            // Recalculate every NOISE_UPDATE_INTERVAL samples instead of every sample
+            samples_since_noise_update++;
+            if (samples_since_noise_update >= NOISE_UPDATE_INTERVAL) {
+                noise_floor = calculateNoiseFloor();
+                samples_since_noise_update = 0;
+            }
+            
+            // Only enforce minimum threshold floor when range is narrow (likely noise, not signal)
+            // If range is wide (>400 ADC units), signal is present and adaptive threshold is valid
+            if (range < 400) {
+                // Narrow range: enforce minimum to prevent noise triggering
+                uint16_t min_threshold = noise_floor + THRESHOLD_MARGIN;
+                threshold = (adaptive_threshold > min_threshold) ? adaptive_threshold : min_threshold;
+            } else {
+                // Wide range: trust adaptive threshold (signal present)
+                threshold = adaptive_threshold;
+            }
         }
+    }
+    
+    /**
+     * Calculate noise floor as 20th percentile of window samples
+     * Uses partial selection sort for efficiency (only sorts up to target percentile)
+     * 
+     * @return Estimated noise floor (ADC units)
+     */
+    uint16_t calculateNoiseFloor() const {
+        // Create working copy of window
+        uint16_t working[WINDOW_SIZE];
+        for (size_t i = 0; i < WINDOW_SIZE; i++) {
+            working[i] = window_samples[i];
+        }
+        
+        // Find 20th percentile using partial selection sort
+        // Only sort up to index 12 (20% of 64), much faster than full sort
+        constexpr size_t target_index = WINDOW_SIZE / 5;  // Index 12 for 20th percentile
+        
+        for (size_t i = 0; i <= target_index; i++) {
+            // Find minimum in remaining unsorted portion
+            size_t min_idx = i;
+            for (size_t j = i + 1; j < WINDOW_SIZE; j++) {
+                if (working[j] < working[min_idx]) {
+                    min_idx = j;
+                }
+            }
+            // Swap to position
+            if (min_idx != i) {
+                uint16_t temp = working[i];
+                working[i] = working[min_idx];
+                working[min_idx] = temp;
+            }
+        }
+        
+        return working[target_index];
     }
     
     /**
@@ -170,7 +233,12 @@ struct AudioDetectionState {
      * @return true if 500ms elapsed since last telemetry
      */
     bool shouldPublishTelemetry(uint64_t current_timestamp_us) const {
-        if (last_telemetry_us == 0) return true;
+        // Always wait full 500ms from start or last telemetry
+        if (last_telemetry_us == 0) {
+            // First telemetry: only publish if 500ms has passed from boot
+            return current_timestamp_us >= TELEMETRY_INTERVAL_US;
+        }
+        // Subsequent telemetry: 500ms since last publish
         return (current_timestamp_us - last_telemetry_us) >= TELEMETRY_INTERVAL_US;
     }
 };

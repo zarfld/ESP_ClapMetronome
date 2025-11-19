@@ -96,7 +96,9 @@ TEST_F(AdaptiveThresholdTest, CalculationWithKnownRange) {
  * 
  * Given: Window with min=200, max=230 (quiet environment)
  * When: Threshold calculated
- * Then: threshold = 0.8 × (230 - 200) + 200 = 0.8 × 30 + 200 = 224
+ * Then: threshold enforces minimum floor for false positive rejection (AC-AUDIO-009)
+ *       Adaptive: 0.8 × 30 + 200 = 224
+ *       But range<400, so minimum enforced: noise_floor + margin ≈ 200 + 80 = 280
  */
 TEST_F(AdaptiveThresholdTest, NarrowRangeQuietEnvironment) {
     // Arrange: Feed samples with narrow range
@@ -109,8 +111,10 @@ TEST_F(AdaptiveThresholdTest, NarrowRangeQuietEnvironment) {
     feedSamples(samples);
     uint16_t threshold = audio_->getThreshold();
     
-    // Assert: threshold = 0.8 × 30 + 200 = 224
-    EXPECT_EQ(224, threshold) << "Threshold should adapt to narrow range";
+    // Assert: minimum threshold enforced for narrow range (false positive protection)
+    // Noise floor ≈ 200, so min_threshold = 200 + 80 = 280
+    EXPECT_GE(threshold, 280) << "Narrow range should enforce minimum threshold";
+    EXPECT_LE(threshold, 300) << "Threshold should be reasonable";
 }
 
 /**
