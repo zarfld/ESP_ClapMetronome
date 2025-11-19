@@ -172,9 +172,9 @@ TEST_F(TelemetryUpdateTest, TelemetryTimestampCorrect) {
         << "Telemetry should be published";
     
     // Timestamp should be at or near 500ms mark
-    EXPECT_GE(last_telemetry_.timestamp_us, 500000)
+    EXPECT_GE(last_telemetry_.timestamp_us, 500000U)
         << "Telemetry timestamp should be >= 500ms";
-    EXPECT_LE(last_telemetry_.timestamp_us, 505000)
+    EXPECT_LE(last_telemetry_.timestamp_us, 505000U)
         << "Telemetry timestamp should be within a few ms of 500ms";
 }
 
@@ -280,7 +280,7 @@ TEST_F(TelemetryUpdateTest, TelemetryContainsBeatCount) {
     
     // If beat was detected, count should be > 0
     if (beat_received) {
-        EXPECT_GT(last_telemetry_.beat_count, 0)
+        EXPECT_GT(last_telemetry_.beat_count, 0U)
             << "Beat count should be > 0 if beat detected";
     }
 }

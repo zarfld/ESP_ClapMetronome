@@ -145,7 +145,7 @@ TEST_F(NoiseRejectionTest, NoiseAtThreshold_NoDetection) {
     }
     
     // Assert: No detections (threshold + margin required per AC-AUDIO-009)
-    EXPECT_EQ(0, beat_events_.size())
+    EXPECT_EQ(0U, beat_events_.size())
         << "Samples at threshold should not trigger detection (margin required)";
 }
 

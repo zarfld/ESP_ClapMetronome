@@ -189,7 +189,7 @@ TEST_F(TimeSyncTest, TracksFailureCount_ForBackoffLogic) {
     #ifdef NATIVE_BUILD
     // Native: syncRtc() currently returns false but may not track failures
     // This is acceptable for current GREEN phase
-    EXPECT_GE(initial_state.sync_failure_count, 0) 
+    EXPECT_GE(initial_state.sync_failure_count, 0U) 
         << "Failure count should be non-negative";
     #else
     // ESP32: Use initial_state to avoid warning

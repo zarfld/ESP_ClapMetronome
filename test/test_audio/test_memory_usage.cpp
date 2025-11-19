@@ -24,6 +24,7 @@
 
 #include <gtest/gtest.h>
 #include <cstddef>  // For offsetof, size_t
+#include <iomanip>  // For std::setprecision
 #include "../../src/audio/AudioDetection.h"
 #include "../../src/audio/AudioDetectionState.h"
 
@@ -158,14 +159,14 @@ TEST_F(MemoryUsageTest, StateVariables_Size) {
         << "DetectionState should be 1 byte (uint8_t enum)";
     
     // Threshold variables (2 bytes each)
-    EXPECT_EQ(sizeof(uint16_t), 2) << "uint16_t should be 2 bytes";
+    EXPECT_EQ(sizeof(uint16_t), 2U) << "uint16_t should be 2 bytes";
     
     // AGC level (1 byte enum)
     EXPECT_EQ(sizeof(AGCLevel), sizeof(uint8_t))
         << "AGCLevel should be 1 byte (uint8_t enum)";
     
     // Boolean flag (1 byte)
-    EXPECT_GE(sizeof(bool), 1) << "bool should be at least 1 byte";
+    EXPECT_GE(sizeof(bool), 1U) << "bool should be at least 1 byte";
     
     std::cout << "State variables validated: "
               << "DetectionState=" << sizeof(DetectionState) << "B, "
