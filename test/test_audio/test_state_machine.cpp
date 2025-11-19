@@ -78,9 +78,9 @@ TEST_F(StateMachineTest, IdleToRisingOnThresholdCrossing) {
     // Act: Feed high sample that will trigger after threshold adapts
     audio_->processSample(3000);  // High value
     
-    // Assert: State changed to RISING
-    EXPECT_EQ(DetectionState::RISING, audio_->getState())
-        << "State should transition to RISING when threshold crossed";
+    // Assert: State changed to RISING_EDGE
+    EXPECT_EQ(DetectionState::RISING_EDGE, audio_->getState())
+        << "State should transition to RISING_EDGE when threshold crossed";
 }
 
 /**
@@ -127,8 +127,8 @@ TEST_F(StateMachineTest, RisingToTriggeredOnPeak) {
         (void)event;
     });
     
-    audio_->processSample(3000);  // IDLE → RISING
-    EXPECT_EQ(DetectionState::RISING, audio_->getState());
+    audio_->processSample(3000);  // IDLE → RISING_EDGE
+    EXPECT_EQ(DetectionState::RISING_EDGE, audio_->getState());
     
     // Act: Continue rising then peak
     mock_timing_.advanceTime(1000);

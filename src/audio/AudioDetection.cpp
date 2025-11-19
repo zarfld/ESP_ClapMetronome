@@ -230,7 +230,7 @@ void AudioDetection::processSample(uint16_t adc_value) {
                 // Layer 3: Combined validation - both conditions must be true
                 if (crosses_threshold && sufficient_amplitude) {
                     // Valid beat candidate detected - transition to RISING
-                    state_.state = DetectionState::RISING;
+                    state_.state = DetectionState::RISING_EDGE;
                     state_.rising_edge_start_us = timestamp_us;
                     state_.rising_edge_start_value = adc_value;
                     state_.rising_edge_peak_value = adc_value;
@@ -238,7 +238,7 @@ void AudioDetection::processSample(uint16_t adc_value) {
             }
             break;
             
-        case DetectionState::RISING:
+        case DetectionState::RISING_EDGE:
             // Track peak value
             if (adc_value > state_.rising_edge_peak_value) {
                 state_.rising_edge_peak_value = adc_value;

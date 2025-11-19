@@ -28,11 +28,13 @@ namespace clap_metronome {
  * Detection State Machine (AC-AUDIO-002)
  * 
  * State transitions:
- * IDLE → RISING → TRIGGERED → DEBOUNCE → IDLE
+ * IDLE → RISING_EDGE → TRIGGERED → DEBOUNCE → IDLE
+ * 
+ * Note: RISING renamed to RISING_EDGE to avoid conflict with Arduino.h RISING macro
  */
 enum class DetectionState : uint8_t {
     IDLE = 0,        ///< No beat detected, monitoring for threshold crossing
-    RISING = 1,      ///< Signal crossed threshold, measuring rise time
+    RISING_EDGE = 1, ///< Signal crossed threshold, measuring rise time
     TRIGGERED = 2,   ///< Beat confirmed, event emitted
     DEBOUNCE = 3     ///< Ignoring signals for 50ms after beat (AC-AUDIO-005)
 };
