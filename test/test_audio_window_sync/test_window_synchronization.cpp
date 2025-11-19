@@ -544,3 +544,8 @@ TEST_F(WindowSynchronizationTest, MemoryLayout_TwoBuffersIndependent) {
     EXPECT_EQ(expected_offset, actual_offset)
         << "Buffers should be contiguous in memory with correct offset";
 }
+
+int main(int argc, char** argv) {
+    ::testing::InitGoogleTest(&argc, argv);
+    return RUN_ALL_TESTS();
+}

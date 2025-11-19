@@ -443,8 +443,13 @@ TEST_F(MemoryUsageTest, MemoryBreakdown_ComponentSummary) {
     std::cout << "Padding/Alignment:    " << padding << " bytes" << std::endl;
     std::cout << "TOTAL:                " << actual_size << " bytes" << std::endl;
     std::cout << "========================================\n" << std::endl;
-    
+
     // Verify sum matches
     EXPECT_EQ(actual_size, component_sum + padding)
         << "Component breakdown doesn't match actual size";
+}
+
+int main(int argc, char** argv) {
+    ::testing::InitGoogleTest(&argc, argv);
+    return RUN_ALL_TESTS();
 }

@@ -339,7 +339,7 @@ TEST_F(NoiseRejectionTest, ThresholdMargin_HysteresisProtection) {
     }
     
     // Assert: No detections (oscillations below threshold + margin)
-    EXPECT_EQ(0, beat_events_.size())
+    EXPECT_EQ(0U, beat_events_.size())
         << "Oscillations within threshold margin should not trigger detection";
 }
 
