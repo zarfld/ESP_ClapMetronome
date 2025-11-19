@@ -172,7 +172,7 @@ TEST_F(NoiseRejectionTest, RandomNoise_BelowThreshold) {
     int detections = processSamplesAndCountBeats(noise);
     
     // Assert: No false positives (noise stays near baseline)
-    EXPECT_EQ(0, detections)
+    EXPECT_EQ(0U, detections)
         << "Random noise below threshold should not trigger detections";
 }
 
@@ -207,7 +207,7 @@ TEST_F(NoiseRejectionTest, PeriodicNoise_NoDetection) {
     int detections = processSamplesAndCountBeats(noise);
     
     // Assert: No false positives from periodic noise
-    EXPECT_EQ(0, detections)
+    EXPECT_EQ(0U, detections)
         << "Periodic 50Hz noise should not trigger detections";
 }
 
@@ -402,7 +402,7 @@ TEST_F(NoiseRejectionTest, QuietEnvironment_NoFalsePositives) {
     }
     
     // Assert: Zero detections
-    EXPECT_EQ(0, beat_events_.size())
+    EXPECT_EQ(0U, beat_events_.size())
         << "Quiet environment should produce zero false positives";
 }
 
@@ -434,7 +434,7 @@ TEST_F(NoiseRejectionTest, ThreeLayerValidation_Integration) {
         detector_->processSample(static_cast<uint16_t>(threshold + 40));
         mock_timing_.advanceTime(62);
     }
-    EXPECT_EQ(0, beat_events_.size()) << "Layer 2 (margin) should block";
+    EXPECT_EQ(0U, beat_events_.size()) << "Layer 2 (margin) should block";
     
     // Test Case 2: Generate proper beat that passes all layers
     beat_events_.clear();
@@ -495,7 +495,7 @@ TEST_F(NoiseRejectionTest, EdgeCase_NarrowRange_EnforcesMinimum) {
     // Assert: Should NOT detect (narrow range enforces minimum)
     // Note: This test validates the conditional logic exists,
     // exact behavior depends on noise floor calculation
-    EXPECT_EQ(0, beat_events_.size())
+    EXPECT_EQ(0U, beat_events_.size())
         << "Narrow range should enforce minimum threshold";
 }
 
