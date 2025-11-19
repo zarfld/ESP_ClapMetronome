@@ -200,7 +200,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: spec-generated-artifacts
-          path: build
+          path: .
       - name: Enforce requirement linkage coverage
         run: |
           python scripts/validate-trace-coverage.py --min-req ${{ env.MIN_REQ_LINKAGE_COVERAGE }}
@@ -220,7 +220,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: spec-generated-artifacts
-          path: build
+          path: .
       - name: Display integrity scan results
         run: |
           if [ -f build/integrity-scan.json ]; then
