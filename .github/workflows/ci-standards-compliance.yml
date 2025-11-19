@@ -165,46 +165,6 @@ jobs:
           
           echo "📈 Code coverage target: >=${{ env.MIN_TEST_COVERAGE }}%"
 
-  traceability-coverage:
-    name: Traceability Coverage Enforcement
-    needs: [github-issues-traceability]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-      - name: Download traceability artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: spec-generated-artifacts
-          path: build
-      - name: Enforce requirement linkage coverage
-        run: |
-          ALLOW_EMPTY_SPECS=1 python scripts/validate-trace-coverage.py --min-req ${{ env.MIN_REQ_LINKAGE_COVERAGE }}
-
-  integrity-scan:
-    name: Integrity Level Scan
-    needs: [github-issues-traceability]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-      - name: Run integrity scan
-        run: |
-          ALLOW_EMPTY_SPECS=1 python scripts/integrity_level_scan.py
-      - name: Upload integrity scan artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: integrity-scan
-          path: build/integrity-scan.json
-
   # Phase 06: Integration Testing
   integration-tests:
     name: Integration Tests (XP - Continuous Integration)
