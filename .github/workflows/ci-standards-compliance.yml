@@ -166,9 +166,12 @@ jobs:
           echo "📈 Code coverage target: >=${{ env.MIN_TEST_COVERAGE }}%"
 
   traceability-coverage:
-    name: Traceability Coverage Enforcement
+    name: Traceability Coverage Enforcement (GitHub Issues)
     needs: [github-issues-traceability]
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: read
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -177,29 +180,116 @@ jobs:
         with:
           python-version: "3.11"
       - name: Install dependencies
-        run: pip install pyyaml
-      - name: Create build directory
-        run: mkdir -p build
-      - name: Generate traceability.json from markdown specs
+        run: pip install PyGithub requests
+      - name: Download traceability report
+        uses: actions/download-artifact@v4
+        with:
+          name: github-issues-traceability-report
+          path: reports
+      - name: Validate traceability coverage from GitHub Issues
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          ALLOW_EMPTY_SPECS=1 python scripts/generators/build_trace_json.py || {
-            echo "⚠️ No markdown specs to generate traceability.json - creating empty structure"
-            echo '{"metrics": {"requirement": {"coverage_pct": 0}}}' > build/traceability.json
-          }
-        continue-on-error: true
-      - name: Enforce requirement linkage coverage
-        run: |
-          if [ -f build/traceability.json ]; then
-            ALLOW_EMPTY_SPECS=1 python scripts/validate-trace-coverage.py --min-req ${{ env.MIN_REQ_LINKAGE_COVERAGE }} || echo "⚠️ Coverage validation skipped - using GitHub Issues validation instead"
-          else
-            echo "⚠️ No traceability.json - markdown spec validation skipped (using GitHub Issues)"
-          fi
-        continue-on-error: true
+          python - <<'PYTHON_SCRIPT'
+          import os, sys
+          from github import Github
+          
+          g = Github(os.environ['GITHUB_TOKEN'])
+          repo = g.get_repo("${{ github.repository }}")
+          
+          print("🔍 Enforcing Traceability Coverage from GitHub Issues\n")
+          
+          # Fetch all requirements
+          req_labels = ['type:requirement:functional', 'type:requirement:non-functional']
+          all_reqs = []
+          for label in req_labels:
+              try:
+                  issues = list(repo.get_issues(labels=[label], state='all'))
+                  all_reqs.extend(issues)
+              except Exception as e:
+                  print(f"⚠️ Error fetching label {label}: {e}")
+          
+          if not all_reqs:
+              print("❌ FAILED: No requirements found in GitHub Issues!")
+              print(f"Expected issues with labels: {req_labels}")
+              sys.exit(1)
+          
+          print(f"📊 Total Requirements: {len(all_reqs)}")
+          
+          # Check traceability links
+          traced_count = 0
+          tested_count = 0
+          missing_trace = []
+          missing_tests = []
+          
+          for issue in all_reqs:
+              body = issue.body or ""
+              has_trace = "traces to:" in body.lower() or "parent:" in body.lower() or "traces-to:" in body.lower()
+              has_test = "verified by:" in body.lower() or "test:" in body.lower() or "verified-by:" in body.lower()
+              
+              if has_trace:
+                  traced_count += 1
+              else:
+                  missing_trace.append(f"#{issue.number}: {issue.title[:60]}")
+              
+              if has_test:
+                  tested_count += 1
+              else:
+                  missing_tests.append(f"#{issue.number}: {issue.title[:60]}")
+          
+          # Calculate coverage
+          trace_pct = (traced_count / len(all_reqs) * 100) if all_reqs else 0
+          test_pct = (tested_count / len(all_reqs) * 100) if all_reqs else 0
+          
+          print(f"\n📈 Coverage Metrics:")
+          print(f"  - Requirements with Parent Link: {traced_count}/{len(all_reqs)} ({trace_pct:.1f}%)")
+          print(f"  - Requirements with Test Coverage: {tested_count}/{len(all_reqs)} ({test_pct:.1f}%)")
+          
+          # Quality gate thresholds
+          MIN_TRACE_PCT = ${{ env.MIN_REQ_LINKAGE_COVERAGE }}
+          MIN_TEST_PCT = 30
+          
+          failed = False
+          
+          if trace_pct < MIN_TRACE_PCT:
+              print(f"\n❌ QUALITY GATE FAILED: Traceability coverage {trace_pct:.1f}% < {MIN_TRACE_PCT}%")
+              print(f"\n   Requirements missing parent links ({len(missing_trace)}):")
+              for item in missing_trace[:10]:
+                  print(f"     - {item}")
+              if len(missing_trace) > 10:
+                  print(f"     ... and {len(missing_trace) - 10} more")
+              failed = True
+          else:
+              print(f"\n✅ Traceability coverage {trace_pct:.1f}% meets minimum {MIN_TRACE_PCT}%")
+          
+          if test_pct < MIN_TEST_PCT:
+              print(f"\n❌ QUALITY GATE FAILED: Test coverage {test_pct:.1f}% < {MIN_TEST_PCT}%")
+              print(f"\n   Requirements missing test links ({len(missing_tests)}):")
+              for item in missing_tests[:10]:
+                  print(f"     - {item}")
+              if len(missing_tests) > 10:
+                  print(f"     ... and {len(missing_tests) - 10} more")
+              failed = True
+          else:
+              print(f"✅ Test coverage {test_pct:.1f}% meets minimum {MIN_TEST_PCT}%")
+          
+          if failed:
+              print("\n❌ BUILD FAILED: Quality gates not met")
+              print("Fix by adding traceability links to issue bodies:")
+              print("  - 'Traces to: #N' for parent requirement")
+              print("  - 'Verified by: #N' for test case")
+              sys.exit(1)
+          else:
+              print("\n✅ All traceability quality gates passed")
+          PYTHON_SCRIPT
 
   integrity-scan:
-    name: Integrity Level Scan
+    name: High-Priority Requirements Validation (GitHub Issues)
     needs: [github-issues-traceability]
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: read
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -207,14 +297,89 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Run integrity scan
+      - name: Install dependencies
+        run: pip install PyGithub requests
+      - name: Validate high-priority requirements
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          ALLOW_EMPTY_SPECS=1 python scripts/integrity_level_scan.py
-      - name: Upload integrity scan artifact
+          python - <<'PYTHON_SCRIPT'
+          import os, sys, json
+          from github import Github
+          from pathlib import Path
+          
+          g = Github(os.environ['GITHUB_TOKEN'])
+          repo = g.get_repo("${{ github.repository }}")
+          
+          print("🔍 Validating High-Priority Requirements (P0/P1)\n")
+          
+          # Find P0/P1 requirements
+          high_priority = []
+          for label in ['priority:p0', 'priority:p1']:
+              try:
+                  issues = list(repo.get_issues(labels=[label], state='open'))
+                  for issue in issues:
+                      # Check if it's a requirement
+                      issue_labels = [l.name for l in issue.labels]
+                      is_req = any('requirement' in l for l in issue_labels)
+                      if is_req:
+                          high_priority.append((issue, label))
+              except Exception as e:
+                  print(f"⚠️ Error fetching {label}: {e}")
+          
+          if not high_priority:
+              print("✅ No open high-priority (P0/P1) requirements")
+              sys.exit(0)
+          
+          print(f"Found {len(high_priority)} open high-priority requirements\n")
+          
+          # Validate each one has proper coverage
+          failed = []
+          for issue, priority in high_priority:
+              body = issue.body or ""
+              has_test = "verified by:" in body.lower() or "test:" in body.lower()
+              has_impl = "implemented by:" in body.lower() or "implements:" in body.lower()
+              
+              status = []
+              if not has_test:
+                  status.append("❌ No test coverage")
+              if not has_impl:
+                  status.append("❌ Not implemented")
+              
+              if status:
+                  failed.append((issue, priority, status))
+                  print(f"❌ [{priority}] #{issue.number}: {issue.title[:60]}")
+                  for s in status:
+                      print(f"   {s}")
+              else:
+                  print(f"✅ [{priority}] #{issue.number}: {issue.title[:60]}")
+          
+          # Save results
+          Path('build').mkdir(exist_ok=True)
+          result = {
+              "highPriority": len(high_priority) > 0,
+              "total": len(high_priority),
+              "passed": len(high_priority) - len(failed),
+              "failed": len(failed),
+              "issues": [{"number": i.number, "title": i.title, "priority": p} for i, p, _ in failed]
+          }
+          Path('build/priority-scan.json').write_text(json.dumps(result, indent=2))
+          
+          if failed:
+              print(f"\n❌ QUALITY GATE FAILED: {len(failed)}/{len(high_priority)} high-priority requirements incomplete")
+              print("\nHigh-priority requirements MUST have:")
+              print("  - Test coverage: 'Verified by: #N' in issue body")
+              print("  - Implementation: 'Implemented by: #N' or PR link")
+              sys.exit(1)
+          else:
+              print(f"\n✅ All {len(high_priority)} high-priority requirements validated")
+          PYTHON_SCRIPT
+      - name: Upload priority scan results
         uses: actions/upload-artifact@v4
         with:
-          name: integrity-scan
-          path: build/integrity-scan.json
+          name: priority-scan
+          path: build/priority-scan.json
+        if: always()
 
   # Phase 06: Integration Testing
   integration-tests:
