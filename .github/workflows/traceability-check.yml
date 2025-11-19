@@ -11,8 +11,8 @@ jobs:
   validate-traceability:
     runs-on: ubuntu-latest
     permissions:
-      issues: read
       contents: read
+      issues: read
       pull-requests: write
     
     steps:

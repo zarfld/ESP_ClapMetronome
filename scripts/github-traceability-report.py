@@ -26,7 +26,7 @@ from collections import defaultdict
 
 GITHUB_TOKEN = os.environ.get('GITHUB_TOKEN')
 REPO_OWNER = 'zarfld'
-REPO_NAME = 'copilot-instructions-template'
+REPO_NAME = 'ESP_ClapMetronome'
 API_BASE = f'https://api.github.com/repos/{REPO_OWNER}/{REPO_NAME}'
 
 # Label categories for filtering
