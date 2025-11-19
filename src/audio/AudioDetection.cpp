@@ -25,6 +25,16 @@
  *   - Prevents reduction below minimum (40dB)
  *   - AGC level included in beat events
  * 
+ * Cycle 4 - AC-AUDIO-004 Beat Event Emission: VALIDATION ✅ (already implemented in Cycle 2)
+ *   Tests: test_beat_event_emission.cpp (12/12 passing)
+ *   - Callback invocation on beat detection
+ *   - Timestamp field accuracy (microsecond precision)
+ *   - Amplitude field (peak ADC value)
+ *   - Threshold field (current adaptive threshold)
+ *   - Gain level field (AGC state: 0/1/2)
+ *   - Kick-only flag (rise_time > 4ms)
+ *   - Multiple beats, callback replacement, debounce validation
+ * 
  * See: https://github.com/zarfld/ESP_ClapMetronome/issues/45
  */
 

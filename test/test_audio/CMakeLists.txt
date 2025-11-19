@@ -102,9 +102,24 @@ target_link_libraries(test_agc_transitions PRIVATE
 
 add_test(NAME AGCTransitionsTests COMMAND test_agc_transitions)
 
+# ===== Test Executable 4: Beat Event Emission Tests =====
+add_executable(test_beat_event_emission
+    test_beat_event_emission.cpp
+    ${AUDIO_SOURCES}
+)
+
+target_include_directories(test_beat_event_emission PRIVATE
+    ${AUDIO_INCLUDE_DIRS}
+)
+
+target_link_libraries(test_beat_event_emission PRIVATE
+    GTest::gtest
+    GTest::gtest_main
+)
+
+add_test(NAME BeatEventEmissionTests COMMAND test_beat_event_emission)
+
 # ===== Future Test Executables (to be added in subsequent TDD cycles) =====
-# Test Cycle 4: Beat Event Tests
-# add_executable(test_beat_events ...)
 # Test Cycle 5: Debounce Tests
 # add_executable(test_debounce ...)
 # Test Cycle 6: Kick Detection Tests
@@ -114,5 +129,5 @@ add_test(NAME AGCTransitionsTests COMMAND test_agc_transitions)
 message(STATUS "Audio Detection Tests Configuration:")
 message(STATUS "  - C++ Standard: ${CMAKE_CXX_STANDARD}")
 message(STATUS "  - Build Type: ${CMAKE_BUILD_TYPE}")
-message(STATUS "  - Test Executables: test_adaptive_threshold, test_state_machine, test_agc_transitions")
+message(STATUS "  - Test Executables: test_adaptive_threshold, test_state_machine, test_agc_transitions, test_beat_event_emission")
 message(STATUS "  - GoogleTest: v1.14.0")
