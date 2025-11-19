@@ -510,3 +510,10 @@ TEST_F(DetectionAccuracyTest, RealWorldScenario_VariedBeatStrengths) {
         << "Real-world varied beat strengths must achieve >95% detection (AC-AUDIO-009). Got: "
         << detectionRate << "%";
 }
+
+
+int main(int argc, char** argv) {
+    ::testing::InitGoogleTest(&argc, argv);
+    return RUN_ALL_TESTS();
+}
+

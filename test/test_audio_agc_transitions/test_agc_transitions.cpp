@@ -248,3 +248,10 @@ TEST_F(AGCTransitionsTest, AGCLevelIncludedInBeatEvents) {
     EXPECT_EQ(static_cast<uint8_t>(AGCLevel::GAIN_40DB), captured_gain)
         << "Beat event should include current AGC level";
 }
+
+
+int main(int argc, char** argv) {
+    ::testing::InitGoogleTest(&argc, argv);
+    return RUN_ALL_TESTS();
+}
+

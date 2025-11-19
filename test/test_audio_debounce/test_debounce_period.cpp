@@ -414,3 +414,10 @@ TEST_F(DebouncePeriodTest, BeatCountIncrementsProperly) {
             << "Beat count should be " << i << " after beat " << i;
     }
 }
+
+
+int main(int argc, char** argv) {
+    ::testing::InitGoogleTest(&argc, argv);
+    return RUN_ALL_TESTS();
+}
+

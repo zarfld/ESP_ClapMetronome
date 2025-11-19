@@ -207,7 +207,7 @@ TEST_F(MemoryUsageTest, TimestampVariables_Size) {
  */
 TEST_F(MemoryUsageTest, CounterVariables_Size) {
     // Counters (4 bytes each for uint32_t)
-    EXPECT_EQ(sizeof(uint32_t), 4) << "uint32_t should be 4 bytes";
+    EXPECT_EQ(sizeof(uint32_t), 4U) << "uint32_t should be 4 bytes";
     
     AudioDetectionState state;
     size_t total_counter_size = sizeof(state.beat_count) +

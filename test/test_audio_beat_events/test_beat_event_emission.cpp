@@ -355,3 +355,10 @@ TEST_F(BeatEventEmissionTest, DebouncePreventsDuplicateCallbacks) {
     // Should still be 1 (debounce prevents duplicate)
     EXPECT_EQ(1, callback_count);
 }
+
+
+int main(int argc, char** argv) {
+    ::testing::InitGoogleTest(&argc, argv);
+    return RUN_ALL_TESTS();
+}
+

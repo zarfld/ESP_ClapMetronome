@@ -521,3 +521,10 @@ TEST_F(ClippingIntegrationTest, EdgeCase_MaxADCValue) {
                 current_state == DetectionState::DEBOUNCE)
         << "State machine should be in valid state after max ADC value";
 }
+
+
+int main(int argc, char** argv) {
+    ::testing::InitGoogleTest(&argc, argv);
+    return RUN_ALL_TESTS();
+}
+

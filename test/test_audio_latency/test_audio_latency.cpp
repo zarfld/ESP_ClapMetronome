@@ -359,3 +359,10 @@ TEST_F(AudioLatencyTest, TelemetryDoesNotAddLatency) {
         << latency_diff << "μs)";
 }
 
+
+
+int main(int argc, char** argv) {
+    ::testing::InitGoogleTest(&argc, argv);
+    return RUN_ALL_TESTS();
+}
+

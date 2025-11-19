@@ -451,3 +451,10 @@ TEST_F(CPUUsageTest, OptimizationValidation_Cycle9Improvements) {
     EXPECT_LT(stats.average_percent, 45.0)
         << "Must meet AC-AUDIO-010 requirement (<45%)";
 }
+
+
+int main(int argc, char** argv) {
+    ::testing::InitGoogleTest(&argc, argv);
+    return RUN_ALL_TESTS();
+}
+

@@ -514,7 +514,7 @@ TEST_F(WindowSynchronizationTest, EdgeCase_MultipleSwapsWithoutWriting) {
  * Traceability: AC-AUDIO-014 (Buffer size validation)
  */
 TEST_F(WindowSynchronizationTest, BufferSize_Constant) {
-    EXPECT_EQ(32, AudioSampleBuffer::BUFFER_SIZE)
+    EXPECT_EQ(32U, AudioSampleBuffer::BUFFER_SIZE)
         << "Buffer size should be 32 samples (legacy design)";
 }
 

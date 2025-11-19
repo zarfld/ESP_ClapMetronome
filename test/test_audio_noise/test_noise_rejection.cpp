@@ -272,7 +272,7 @@ TEST_F(NoiseRejectionTest, BurstNoise_BelowMinimumAmplitude) {
     }
     
     // Assert: No detections (amplitude too small)
-    EXPECT_EQ(0, beat_events_.size())
+    EXPECT_EQ(0U, beat_events_.size())
         << "Burst noise below minimum amplitude should not trigger";
 }
 
