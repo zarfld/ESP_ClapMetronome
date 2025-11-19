@@ -375,7 +375,7 @@ TEST_F(NoiseRejectionTest, WidebandNoise_HighFrequency) {
     }
     
     // Assert: No detections (too fast for valid beat)
-    EXPECT_EQ(0, beat_events_.size())
+    EXPECT_EQ(0U, beat_events_.size())
         << "High-frequency noise should not trigger detections";
 }
 
