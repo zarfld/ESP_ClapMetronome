@@ -101,10 +101,10 @@ TEST_F(TimingManagerTest, GetTimestampUs_HasMicrosecondPrecision) {
     
     // Allow up to 100µs for native test overhead (GoogleTest + system calls)
     // Real hardware will be <10µs
-    EXPECT_LT(delta, 100) << "Successive timestamp calls must differ by <100µs";
+    EXPECT_LT(delta, 100U) << "Successive timestamp calls must differ by <100µs";
     
     // Verify precision is at least microsecond level (not milliseconds)
-    EXPECT_LT(delta, 1000) << "Timestamp precision must be finer than milliseconds";
+    EXPECT_LT(delta, 1000U) << "Timestamp precision must be finer than milliseconds";
 }
 
 //==============================================================================

@@ -78,8 +78,8 @@ TEST_F(TimeSyncTest, InitializesSyncState_Correctly) {
     
     // Assert: Sync state fields should be initialized to safe defaults
     EXPECT_FALSE(state.ntp_synced) << "Should start without NTP sync";
-    EXPECT_EQ(state.last_sync_time, 0) << "Last sync time should be 0 initially";
-    EXPECT_EQ(state.sync_failure_count, 0) << "Sync failure count should start at 0";
+    EXPECT_EQ(state.last_sync_time, 0U) << "Last sync time should be 0 initially";
+    EXPECT_EQ(state.sync_failure_count, 0U) << "Sync failure count should start at 0";
 }
 
 /**
@@ -101,7 +101,7 @@ TEST_F(TimeSyncTest, SyncState_RemainsConsistent_AfterSyncAttempt) {
     
     if (sync_result) {
         // Success: last_sync_time should be updated
-        EXPECT_GT(final_state.last_sync_time, 0) 
+        EXPECT_GT(final_state.last_sync_time, 0U) 
             << "last_sync_time should be set on successful sync";
         EXPECT_TRUE(final_state.ntp_synced) 
             << "ntp_synced flag should be true after success";
@@ -145,7 +145,7 @@ TEST_F(TimeSyncTest, HandlesMultipleSyncAttempts_Gracefully) {
     
     // State should remain valid
     const TimingManagerState& final_state = timing_manager->getState();
-    EXPECT_GE(final_state.sync_failure_count, 0) << "Failure count should be non-negative";
+    EXPECT_GE(final_state.sync_failure_count, 0U) << "Failure count should be non-negative";
 }
 
 /**

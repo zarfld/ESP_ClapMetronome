@@ -174,7 +174,7 @@ TEST_F(AudioLatencyTest, EndToEndLatencyUnder20Milliseconds) {
         << "Latency should be <20ms (measured: " << latency_us << "μs)";
     
     // Typical expected: 11-12ms (10ms baseline + 1ms rise + peak detection)
-    EXPECT_GT(latency_us, 10000)
+    EXPECT_GT(latency_us, 10000U)
         << "Latency should include baseline period (>10ms)";
 }
 
