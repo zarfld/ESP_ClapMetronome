@@ -169,7 +169,7 @@ TEST_F(NoiseRejectionTest, RandomNoise_BelowThreshold) {
     std::vector<uint16_t> noise = generateRandomNoise(200, BASELINE, 30);
     
     // Act: Process noise
-    int detections = processSamplesAndCountBeats(noise);
+    size_t detections = processSamplesAndCountBeats(noise);
     
     // Assert: No false positives (noise stays near baseline)
     EXPECT_EQ(0U, detections)
@@ -204,7 +204,7 @@ TEST_F(NoiseRejectionTest, PeriodicNoise_NoDetection) {
     
     // Act: Continue with periodic noise (same amplitude, no sudden changes)
     std::vector<uint16_t> noise = generatePeriodicNoise(320, CENTER, AMPLITUDE, 50.0);
-    int detections = processSamplesAndCountBeats(noise);
+    size_t detections = processSamplesAndCountBeats(noise);
     
     // Assert: No false positives from periodic noise
     EXPECT_EQ(0U, detections)
@@ -460,7 +460,7 @@ TEST_F(NoiseRejectionTest, ThreeLayerValidation_Integration) {
     }
     
     // Assert: Should detect (passes all layers)
-    EXPECT_EQ(1, beat_events_.size())
+    EXPECT_EQ(1U, beat_events_.size())
         << "Signal passing all three layers should be detected";
 }
 
@@ -540,7 +540,7 @@ TEST_F(NoiseRejectionTest, EdgeCase_WideRange_AllowsLowerThreshold) {
     mock_timing_.advanceTime(62);
     
     // Assert: Should detect (wide range, threshold + margin sufficient)
-    EXPECT_EQ(1, beat_events_.size())
+    EXPECT_EQ(1U, beat_events_.size())
         << "Wide range should allow detection at adaptive threshold";
 }
 
