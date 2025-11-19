@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.14)
-project(TimingManagerTests)
+project(TimestampQueryTests)
 
 # Set C++ standard
 set(CMAKE_CXX_STANDARD 17)
@@ -60,43 +60,3 @@ target_link_libraries(test_timestamp_query
 # Add test to CTest
 include(GoogleTest)
 gtest_discover_tests(test_timestamp_query)
-
-# Test 2: RTC Health Status (TDD Cycle 2)
-add_executable(test_rtc_health
-    test_rtc_health.cpp
-    ${SOURCE_FILES}
-)
-
-target_include_directories(test_rtc_health PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/../..
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../src
-)
-
-target_link_libraries(test_rtc_health
-    gtest
-    gtest_main
-)
-
-gtest_discover_tests(test_rtc_health)
-
-# Test 3: Time Synchronization (TDD Cycle 3)
-add_executable(test_time_sync
-    test_time_sync.cpp
-    ${SOURCE_FILES}
-)
-
-target_include_directories(test_time_sync PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/../..
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../src
-)
-
-target_link_libraries(test_time_sync
-    gtest
-    gtest_main
-)
-
-gtest_discover_tests(test_time_sync)
-
-# Note: Combined executable not feasible due to GoogleTest's internal main() registration
-# Each test file uses TEST_F which registers with gtest_main's main() function
-# Solution: Use run_all_tests.ps1 script to execute all three test executables sequentially

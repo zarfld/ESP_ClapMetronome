@@ -235,7 +235,7 @@ TEST_F(NoiseRejectionTest, GradualDrift_NoDetection) {
     }
     
     // Assert: No detections (adaptive threshold should follow drift)
-    EXPECT_EQ(0, beat_events_.size())
+    EXPECT_EQ(0U, beat_events_.size())
         << "Gradual baseline drift should not trigger detections";
 }
 

@@ -184,7 +184,7 @@ TEST_F(MemoryUsageTest, StateVariables_Size) {
  */
 TEST_F(MemoryUsageTest, TimestampVariables_Size) {
     // Timestamps (8 bytes each)
-    EXPECT_EQ(sizeof(uint64_t), 8) << "uint64_t should be 8 bytes";
+    EXPECT_EQ(sizeof(uint64_t), 8U) << "uint64_t should be 8 bytes";
     
     AudioDetectionState state;
     size_t total_timestamp_size = sizeof(state.last_beat_timestamp_us) +
