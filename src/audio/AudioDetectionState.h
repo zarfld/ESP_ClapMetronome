@@ -164,8 +164,8 @@ struct AudioDetectionState {
         }
         
         // Find 20th percentile using partial selection sort
-        // Only sort up to index 12 (20% of 64), much faster than full sort
-        constexpr size_t target_index = WINDOW_SIZE / 5;  // Index 12 for 20th percentile
+        // Only sort up to index 20 (20% of 100), much faster than full sort
+        constexpr size_t target_index = WINDOW_SIZE / 5;  // Index 20 for 20th percentile
         
         for (size_t i = 0; i <= target_index; i++) {
             // Find minimum in remaining unsorted portion
@@ -192,15 +192,16 @@ struct AudioDetectionState {
      * @param sample ADC reading to add
      */
     void addToWindow(uint16_t sample) {
+        // Add sample to circular buffer
         window_samples[window_index] = sample;
         window_index = (window_index + 1) % WINDOW_SIZE;
         
-        // Track how many valid samples we have (up to WINDOW_SIZE)
+        // Track valid sample count during initial fill (stops at WINDOW_SIZE)
         if (window_count < WINDOW_SIZE) {
             window_count++;
         }
         
-        // Recalculate min/max from valid samples only
+        // Recalculate min/max from valid samples only (avoids uninitialized zeros)
         size_t valid_count = window_count;
         min_value = window_samples[0];
         max_value = window_samples[0];
