@@ -9,6 +9,9 @@
             "name": "PlatformIO",
             "includePath": [
                 "D:/Repos/ESP_ClapMetronome/src",
+                "C:/Users/zarfld/.platformio/packages/framework-arduinoespressif32/libraries/WebServer/src",
+                "C:/Users/zarfld/.platformio/packages/framework-arduinoespressif32/libraries/FS/src",
+                "C:/Users/zarfld/.platformio/packages/framework-arduinoespressif32/libraries/WiFi/src",
                 "D:/Repos/ESP_ClapMetronome/.pio/libdeps/esp32dev/MQTT/src",
                 "D:/Repos/ESP_ClapMetronome/.pio/libdeps/esp32dev/RTClib/src",
                 "D:/Repos/ESP_ClapMetronome/.pio/libdeps/esp32dev/Adafruit MCP23017 Arduino Library/src",
@@ -221,7 +224,6 @@
                 "C:/Users/zarfld/.platformio/packages/framework-arduinoespressif32/libraries/ESPmDNS/src",
                 "C:/Users/zarfld/.platformio/packages/framework-arduinoespressif32/libraries/Ethernet/src",
                 "C:/Users/zarfld/.platformio/packages/framework-arduinoespressif32/libraries/FFat/src",
-                "C:/Users/zarfld/.platformio/packages/framework-arduinoespressif32/libraries/FS/src",
                 "C:/Users/zarfld/.platformio/packages/framework-arduinoespressif32/libraries/HTTPClient/src",
                 "C:/Users/zarfld/.platformio/packages/framework-arduinoespressif32/libraries/HTTPUpdate/src",
                 "C:/Users/zarfld/.platformio/packages/framework-arduinoespressif32/libraries/HTTPUpdateServer/src",
@@ -238,8 +240,6 @@
                 "C:/Users/zarfld/.platformio/packages/framework-arduinoespressif32/libraries/Ticker/src",
                 "C:/Users/zarfld/.platformio/packages/framework-arduinoespressif32/libraries/USB/src",
                 "C:/Users/zarfld/.platformio/packages/framework-arduinoespressif32/libraries/Update/src",
-                "C:/Users/zarfld/.platformio/packages/framework-arduinoespressif32/libraries/WebServer/src",
-                "C:/Users/zarfld/.platformio/packages/framework-arduinoespressif32/libraries/WiFi/src",
                 "C:/Users/zarfld/.platformio/packages/framework-arduinoespressif32/libraries/WiFiClientSecure/src",
                 "C:/Users/zarfld/.platformio/packages/framework-arduinoespressif32/libraries/WiFiProv/src",
                 ""
@@ -248,6 +248,9 @@
                 "limitSymbolsToIncludedHeaders": true,
                 "path": [
                     "D:/Repos/ESP_ClapMetronome/src",
+                    "C:/Users/zarfld/.platformio/packages/framework-arduinoespressif32/libraries/WebServer/src",
+                    "C:/Users/zarfld/.platformio/packages/framework-arduinoespressif32/libraries/FS/src",
+                    "C:/Users/zarfld/.platformio/packages/framework-arduinoespressif32/libraries/WiFi/src",
                     "D:/Repos/ESP_ClapMetronome/.pio/libdeps/esp32dev/MQTT/src",
                     "D:/Repos/ESP_ClapMetronome/.pio/libdeps/esp32dev/RTClib/src",
                     "D:/Repos/ESP_ClapMetronome/.pio/libdeps/esp32dev/Adafruit MCP23017 Arduino Library/src",
@@ -460,7 +463,6 @@
                     "C:/Users/zarfld/.platformio/packages/framework-arduinoespressif32/libraries/ESPmDNS/src",
                     "C:/Users/zarfld/.platformio/packages/framework-arduinoespressif32/libraries/Ethernet/src",
                     "C:/Users/zarfld/.platformio/packages/framework-arduinoespressif32/libraries/FFat/src",
-                    "C:/Users/zarfld/.platformio/packages/framework-arduinoespressif32/libraries/FS/src",
                     "C:/Users/zarfld/.platformio/packages/framework-arduinoespressif32/libraries/HTTPClient/src",
                     "C:/Users/zarfld/.platformio/packages/framework-arduinoespressif32/libraries/HTTPUpdate/src",
                     "C:/Users/zarfld/.platformio/packages/framework-arduinoespressif32/libraries/HTTPUpdateServer/src",
@@ -477,8 +479,6 @@
                     "C:/Users/zarfld/.platformio/packages/framework-arduinoespressif32/libraries/Ticker/src",
                     "C:/Users/zarfld/.platformio/packages/framework-arduinoespressif32/libraries/USB/src",
                     "C:/Users/zarfld/.platformio/packages/framework-arduinoespressif32/libraries/Update/src",
-                    "C:/Users/zarfld/.platformio/packages/framework-arduinoespressif32/libraries/WebServer/src",
-                    "C:/Users/zarfld/.platformio/packages/framework-arduinoespressif32/libraries/WiFi/src",
                     "C:/Users/zarfld/.platformio/packages/framework-arduinoespressif32/libraries/WiFiClientSecure/src",
                     "C:/Users/zarfld/.platformio/packages/framework-arduinoespressif32/libraries/WiFiProv/src",
                     ""

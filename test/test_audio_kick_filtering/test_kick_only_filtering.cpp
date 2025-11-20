@@ -65,44 +65,56 @@ protected:
      */
     void simulateBeatWithRiseTime(uint16_t peak_amplitude, uint64_t rise_time_us) {
         // CRITICAL: Use LOW baseline that won't cross threshold
+        // Window is initialized with 2000 ADC (midpoint), so we need to emit enough
+        // baseline samples to flush the window (64 samples) to establish a stable low baseline
         // Initial threshold is 50, so 200 ADC is well below threshold + margin (130)
-        for (int i = 0; i < 10; ++i) {
+        for (int i = 0; i < 70; ++i) {  // Emit 70 samples to fully flush window (size 64)
             detector_->processSample(200);  // Low baseline
             mockTiming_.advanceTime(1000); // 1ms between samples
         }
 
-        // Cross threshold immediately (algorithm records this timestamp as START)
-        // Typical threshold ~2400 + 80 margin = 2480
-        // We use 3000 to ensure we're above threshold + margin
-        detector_->processSample(3000);
-        // NOTE: Time = 0 microseconds from start of rise (this is the reference point)
+        // Cross threshold - use a value that's above threshold but below peak
+        // Initial threshold is 50, margin is 80, so Layer 1 requires > 130 ADC
+        // Layer 2 requires > (noise_floor + MIN_SIGNAL) = 100 + 200 = 300 ADC
+        // Use ~25% of peak amplitude as threshold crossing (ensures we're well above 300)
+        uint16_t threshold_crossing_value = static_cast<uint16_t>(peak_amplitude * 0.25);
+        if (threshold_crossing_value < 400) {
+            threshold_crossing_value = 400;  // Minimum to ensure we're well above Layer 2 (300)
+        }
+        detector_->processSample(threshold_crossing_value);
+        // NOTE: Threshold crossing recorded at current mock time
         
-        // We need the falling edge to arrive at exactly rise_time_us from threshold crossing
-        // Strategy: Advance time to just before target, emit peak, then emit falling edge
+        // Strategy: Advance time to exactly rise_time_us, emit peak, then falling edge
+        // The falling edge detection timestamp determines the measured rise time
         
         if (rise_time_us >= 2000) {
             // Gradual rise - emit samples incrementally
+            // Calculate how many intermediate samples we can emit
             uint64_t rise_ms = rise_time_us / 1000;
-            uint16_t amplitude_per_step = static_cast<uint16_t>((peak_amplitude - 3000) / rise_ms);
+            uint64_t remaining_us = rise_time_us % 1000;  // Fractional part
+            uint16_t amplitude_per_step = static_cast<uint16_t>((peak_amplitude - threshold_crossing_value) / rise_ms);
             
-            // Emit rising samples up to rise_ms - 1
+            // Emit rising samples (1ms apart)
             for (uint64_t ms = 1; ms < rise_ms; ++ms) {
                 mockTiming_.advanceTime(1000);
-                uint16_t current_amplitude = 3000 + static_cast<uint16_t>(amplitude_per_step * ms);
+                uint16_t current_amplitude = threshold_crossing_value + static_cast<uint16_t>(amplitude_per_step * ms);
                 detector_->processSample(current_amplitude);
             }
             
-            // Emit peak at rise_ms - 1 + 1ms = rise_time_us
-            mockTiming_.advanceTime(1000);
+            // Advance to EXACTLY rise_time_us (handle fractional microseconds)
+            mockTiming_.advanceTime(1000 + remaining_us);
             detector_->processSample(peak_amplitude);
         } else {
-            // Fast rise - jump directly to rise_time_us and emit peak
+            // Fast rise - advance exactly rise_time_us microseconds
             mockTiming_.advanceTime(rise_time_us);
             detector_->processSample(peak_amplitude);
         }
         
-        // Emit falling edge at the same timestamp as peak (simulates instantaneous fall detection)
-        // The algorithm will use THIS sample's timestamp for rise time calculation
+        // Falling edge at peak timestamp (detection happens immediately after peak)
+        // The algorithm processes samples in order:
+        // 1. Peak sample updates rising_edge_peak_value
+        // 2. Falling sample (< peak) triggers beat detection
+        // 3. Rise time = falling_timestamp - rising_edge_start_us
         detector_->processSample(peak_amplitude - 200);
         mockTiming_.advanceTime(1000);
         detector_->processSample(2500);
@@ -218,7 +230,8 @@ TEST_F(KickOnlyFilteringTest, FastAttack_3ms_HiHatSound) {
 TEST_F(KickOnlyFilteringTest, SlowAttack_5ms_KickDrum) {
     simulateBeatWithRiseTime(3700, 5000);
     
-    ASSERT_EQ(1U, beatEvents_.size());
+    ASSERT_EQ(1U, beatEvents_.size()) << "Should detect exactly 1 beat";
+    
     EXPECT_TRUE(beatEvents_[0].kick_only) 
         << "5ms rise time should be kick drum (slow attack)";
 }
@@ -341,19 +354,8 @@ TEST_F(KickOnlyFilteringTest, MixedSequence_KicksAndClaps) {
  * Then: kick_only = false
  */
 TEST_F(KickOnlyFilteringTest, VeryFastAttack_0_5ms_InstantaneousClap) {
-    // Simulate near-instantaneous rise (single sample above threshold)
-    for (int i = 0; i < 10; ++i) {
-        detector_->processSample(2000);
-        mockTiming_.advanceTime(500);  // 0.5ms between samples
-    }
-    
-    // Instantaneous peak
-    detector_->processSample(3800);
-    mockTiming_.advanceTime(500);  // Total rise time: 0.5ms
-    
-    // Fall
-    detector_->processSample(2500);
-    mockTiming_.advanceTime(500);
+    // Use the standard test helper with 500us (0.5ms) rise time
+    simulateBeatWithRiseTime(3800, 500);
     
     ASSERT_EQ(1U, beatEvents_.size());
     EXPECT_FALSE(beatEvents_[0].kick_only) 
