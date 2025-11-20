@@ -86,11 +86,12 @@ struct AudioDetectionState {
     uint64_t last_telemetry_us;         ///< Timestamp of last telemetry publish
     
     // Window tracking (for adaptive threshold calculation)
-    static constexpr size_t WINDOW_SIZE = 64;  ///< Samples for min/max tracking (from legacy code)
-    uint16_t window_samples[WINDOW_SIZE];      ///< Rolling window of recent samples
-    uint8_t  window_index;                     ///< Current write position in window
-    uint16_t noise_floor;                      ///< Estimated noise floor (for false positive rejection)
-    uint8_t  samples_since_noise_update;       ///< Counter for noise floor recalculation
+    static constexpr size_t WINDOW_SIZE = 100;  ///< Samples for min/max tracking (AC-AUDIO-001)
+    uint16_t window_samples[WINDOW_SIZE];       ///< Rolling window of recent samples
+    uint8_t  window_index;                      ///< Current write position in window
+    uint8_t  window_count;                      ///< Number of valid samples in window (0-100)
+    uint16_t noise_floor;                       ///< Estimated noise floor (for false positive rejection)
+    uint8_t  samples_since_noise_update;        ///< Counter for noise floor recalculation
     static constexpr uint8_t NOISE_UPDATE_INTERVAL = 16; ///< Recalculate noise floor every N samples
     
     // Constants for detection algorithm
@@ -120,44 +121,32 @@ struct AudioDetectionState {
         rising_edge_peak_value = 0;
         last_telemetry_us = 0;
         window_index = 0;
+        window_count = 0;  // No samples yet
         noise_floor = 100;  // Initial noise floor estimate
         samples_since_noise_update = 0;
-        // Initialize window with midpoint value to avoid zero-induced threshold issues
-        // With zeros, first samples cause incorrect min/max calculations
-        // Using 2000 (midpoint of 0-4095 12-bit ADC range) provides stable baseline
+        // Initialize window with zeros for clean initial state
+        // Min/max will be calculated from actual samples as they arrive
         for (size_t i = 0; i < WINDOW_SIZE; i++) {
-            window_samples[i] = 2000;
+            window_samples[i] = 0;
         }
     }
     
     /**
-     * Update adaptive threshold (AC-AUDIO-001, AC-AUDIO-009)
-     * Formula: threshold = max(0.8 × (max - min) + min, noise_floor + margin)
-     * Enhanced with noise floor estimation for false positive rejection
+     * Update adaptive threshold (AC-AUDIO-001)
+     * Formula: threshold = 0.8 × (max - min) + min
+     * 
+     * Note: Enhanced with AC-AUDIO-009 false positive rejection in future cycles
      */
     void updateThreshold() {
-        if (max_value > min_value) {
-            float range = static_cast<float>(max_value - min_value);
-            uint16_t adaptive_threshold = static_cast<uint16_t>(THRESHOLD_FACTOR * range + min_value);
-            
-            // Periodically update noise floor (cached for performance)
-            // Recalculate every NOISE_UPDATE_INTERVAL samples instead of every sample
-            samples_since_noise_update++;
-            if (samples_since_noise_update >= NOISE_UPDATE_INTERVAL) {
-                noise_floor = calculateNoiseFloor();
-                samples_since_noise_update = 0;
-            }
-            
-            // Only enforce minimum threshold floor when range is narrow (likely noise, not signal)
-            // If range is wide (>400 ADC units), signal is present and adaptive threshold is valid
-            if (range < 400) {
-                // Narrow range: enforce minimum to prevent noise triggering
-                uint16_t min_threshold = noise_floor + THRESHOLD_MARGIN;
-                threshold = (adaptive_threshold > min_threshold) ? adaptive_threshold : min_threshold;
-            } else {
-                // Wide range: trust adaptive threshold (signal present)
-                threshold = adaptive_threshold;
-            }
+        // Calculate adaptive threshold (works even when max == min)
+        float range = static_cast<float>(max_value - min_value);
+        threshold = static_cast<uint16_t>(THRESHOLD_FACTOR * range + min_value);
+        
+        // Update noise floor periodically for AC-AUDIO-009 (future use)
+        samples_since_noise_update++;
+        if (samples_since_noise_update >= NOISE_UPDATE_INTERVAL) {
+            noise_floor = calculateNoiseFloor();
+            samples_since_noise_update = 0;
         }
     }
     
@@ -206,10 +195,16 @@ struct AudioDetectionState {
         window_samples[window_index] = sample;
         window_index = (window_index + 1) % WINDOW_SIZE;
         
-        // Recalculate min/max from window
+        // Track how many valid samples we have (up to WINDOW_SIZE)
+        if (window_count < WINDOW_SIZE) {
+            window_count++;
+        }
+        
+        // Recalculate min/max from valid samples only
+        size_t valid_count = window_count;
         min_value = window_samples[0];
         max_value = window_samples[0];
-        for (size_t i = 1; i < WINDOW_SIZE; i++) {
+        for (size_t i = 1; i < valid_count; i++) {
             if (window_samples[i] < min_value) min_value = window_samples[i];
             if (window_samples[i] > max_value) max_value = window_samples[i];
         }
