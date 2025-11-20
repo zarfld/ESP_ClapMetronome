@@ -133,7 +133,7 @@ TEST_F(MemoryUsageTest, MemoryRequirement_TotalFootprint) {
  * Traceability: AC-AUDIO-001 (Adaptive threshold uses window)
  */
 TEST_F(MemoryUsageTest, WindowMemory_64Samples) {
-    constexpr size_t EXPECTED_WINDOW_SIZE = 64 * sizeof(uint16_t);
+    constexpr size_t EXPECTED_WINDOW_SIZE = 100 * sizeof(uint16_t);  // AUDIO-01: Changed from 64 to 100
     
     AudioDetectionState state;
     size_t actual_window_size = sizeof(state.window_samples);
@@ -143,7 +143,7 @@ TEST_F(MemoryUsageTest, WindowMemory_64Samples) {
         << " bytes (expected: " << EXPECTED_WINDOW_SIZE << " bytes)";
     
     std::cout << "Window buffer: " << actual_window_size << " bytes "
-              << "(64 samples × " << sizeof(uint16_t) << " bytes)" << std::endl;
+              << "(100 samples × " << sizeof(uint16_t) << " bytes)" << std::endl;  // AUDIO-01: 100 samples
 }
 
 /**
@@ -274,7 +274,7 @@ TEST_F(MemoryUsageTest, MemoryAlignment_Padding) {
                              sizeof(bool) +                     // 1 byte
                              sizeof(uint32_t) * 2 +             // 8 bytes (counters)
                              sizeof(uint64_t) * 3 +             // 24 bytes (timestamps)
-                             sizeof(uint16_t) * 64 +            // 128 bytes (window)
+                             sizeof(uint16_t) * 100 +           // 200 bytes (window) - AUDIO-01: Changed from 64 to 100
                              sizeof(uint8_t) * 2 +              // 2 bytes (window_index, samples_since_noise_update)
                              sizeof(uint16_t);                  // 2 bytes (noise_floor)
     
@@ -311,10 +311,10 @@ TEST_F(MemoryUsageTest, StackAllocation_Validation) {
     EXPECT_EQ(state.beat_count, 0u);
     EXPECT_EQ(state.window_index, 0u);
     
-    // Verify window initialized to midpoint (2000)
+    // Verify window initialized to zero (AUDIO-01: Changed from 2000 midpoint to 0)
     for (size_t i = 0; i < AudioDetectionState::WINDOW_SIZE; i++) {
-        EXPECT_EQ(state.window_samples[i], 2000)
-            << "Window sample " << i << " not initialized to midpoint";
+        EXPECT_EQ(state.window_samples[i], 0)
+            << "Window sample " << i << " not initialized to zero";
     }
     
     std::cout << "Stack allocation validated: " << sizeof(AudioDetectionState)
@@ -342,7 +342,7 @@ TEST_F(MemoryUsageTest, StaticConstants_NotCounted) {
         << "Static constants should not affect instance size";
     
     // Verify constants are accessible (compile-time check)
-    EXPECT_EQ(AudioDetectionState::WINDOW_SIZE, 64u);
+    EXPECT_EQ(AudioDetectionState::WINDOW_SIZE, 100u);  // AUDIO-01: Changed from 64 to 100
     EXPECT_EQ(AudioDetectionState::CLIPPING_THRESHOLD, 4000u);
     EXPECT_EQ(AudioDetectionState::DEBOUNCE_PERIOD_US, 50000u);
     EXPECT_EQ(AudioDetectionState::TELEMETRY_INTERVAL_US, 500000u);

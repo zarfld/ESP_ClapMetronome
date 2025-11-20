@@ -31,6 +31,7 @@ class DebouncePeriodTest : public ::testing::Test {
 protected:
     MockTimingProvider mock_timing_;
     AudioDetection* audio_;
+    bool baseline_established_ = false;
     
     void SetUp() override {
         audio_ = new AudioDetection(&mock_timing_);
@@ -43,28 +44,48 @@ protected:
     }
     
     /**
+     * Helper: Establish baseline window (50 samples @ 500)
+     * Creates: min=500, max=500, threshold=500
+     */
+    void establishBaseline() {
+        if (baseline_established_) return;
+        for (int i = 0; i < 50; i++) {
+            audio_->processSample(500);
+            mock_timing_.advanceTime(125);
+        }
+        baseline_established_ = true;
+    }
+    
+    /**
      * Helper: Trigger a beat at current timestamp
      * Returns: timestamp when beat was triggered
      */
     uint64_t triggerBeat() {
-        // Get to RISING state
-        audio_->processSample(3000);
+        establishBaseline();
+        
+        uint64_t beat_timestamp = mock_timing_.getTimestampUs() + 3000;
+        
+        // Rising edge: amplitude crosses threshold (IDLE → RISING)
+        audio_->processSample(1000);
+        
+        // Continue rising
+        mock_timing_.advanceTime(1000);  // 1ms later
+        audio_->processSample(1100);
         
         // Peak
-        mock_timing_.advanceTime(1000);
-        audio_->processSample(3200);
+        mock_timing_.advanceTime(1000);  // 1ms later
+        audio_->processSample(1200);
         
-        // Fall (triggers beat)
-        mock_timing_.advanceTime(1000);
-        uint64_t beat_timestamp = mock_timing_.getTimestampUs();
-        audio_->processSample(3100);
+        // Start falling (RISING → TRIGGERED, emits beat event)
+        mock_timing_.advanceTime(1000);  // 1ms later
+        audio_->processSample(1100);
         
         // Should now be in TRIGGERED
         EXPECT_EQ(DetectionState::TRIGGERED, audio_->getState());
         
         // Next sample moves to DEBOUNCE
         mock_timing_.advanceTime(100);
-        audio_->processSample(2000);
+        audio_->processSample(500);  // Back to baseline
         EXPECT_EQ(DetectionState::DEBOUNCE, audio_->getState());
         
         return beat_timestamp;
@@ -108,9 +129,9 @@ TEST_F(DebouncePeriodTest, NoBeatsDetectedDuringDebounce) {
         mock_timing_.advanceTime(1000);  // Advance 1ms at a time
         
         // Feed high samples (would normally trigger beat)
-        audio_->processSample(3500);
-        audio_->processSample(3600);
-        audio_->processSample(3400);
+        audio_->processSample(1500);
+        audio_->processSample(1600);
+        audio_->processSample(1400);
     }
     
     // Should still be only 1 beat (no additional beats during debounce)
@@ -234,7 +255,7 @@ TEST_F(DebouncePeriodTest, DebouncePreventsFalsePositives) {
         
         // Alternate high/low (would trigger beats if not debounced)
         if (i % 2 == 0) {
-            audio_->processSample(3500);  // High
+            audio_->processSample(1500);  // High
         } else {
             audio_->processSample(500);   // Low
         }
