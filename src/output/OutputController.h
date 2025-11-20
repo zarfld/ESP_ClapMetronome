@@ -246,6 +246,14 @@ public:
      */
     ~OutputController();
     
+    /**
+     * @brief Initialize output controller
+     * 
+     * Resets state to defaults. Called automatically by constructor,
+     * but can be called again to reset state.
+     */
+    void init();
+    
     // ========== DES-I-013: Output Trigger Interface ==========
     
     /**
@@ -503,6 +511,15 @@ public:
      * @return true if HIGH, false if LOW
      */
     bool getRelayGPIO() const;
+    
+    /**
+     * @brief Check if relay is currently active
+     * 
+     * Alias for getRelayGPIO() for better test readability.
+     * 
+     * @return true if relay is currently ON
+     */
+    bool isRelayActive() const;
     
     // ========== Timer Control (AC-OUT-007, AC-OUT-008, AC-OUT-009, AC-OUT-010) ==========
     

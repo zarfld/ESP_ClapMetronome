@@ -10,6 +10,8 @@ FetchContent_Declare(
   GIT_REPOSITORY https://github.com/google/googletest.git
   GIT_TAG v1.14.0
 )
+# Force shared CRT to match project settings
+set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googletest)
 
 enable_testing()
@@ -28,6 +30,7 @@ add_executable(test_bpm_output
 target_include_directories(test_bpm_output PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../../src
     ${CMAKE_CURRENT_SOURCE_DIR}/../mocks
+    ${CMAKE_CURRENT_SOURCE_DIR}/../..
 )
 
 target_link_libraries(test_bpm_output

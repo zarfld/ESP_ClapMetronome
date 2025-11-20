@@ -28,9 +28,14 @@ void BPMOutputBridge::init() {
 void BPMOutputBridge::onBPMUpdate(const BPMUpdateEvent& event) {
     // Update output controller with new BPM
     if (event.bpm >= 40.0f && event.bpm <= 240.0f) {
-        uint16_t bpm_int = static_cast<uint16_t>(event.bpm + 0.5f);  // Round to nearest
+        uint16_t bpm_int = static_cast<uint16_t>(event.bpm + 0.5f);
         output_controller_->updateBPM(bpm_int);
         last_bpm_ = event.bpm;
+    }
+    
+    // Reset syncing flag if output stopped
+    if (output_controller_->getState() == OutputState::STOPPED) {
+        is_syncing_ = false;
     }
     
     // Handle auto-sync on stability

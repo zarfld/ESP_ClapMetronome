@@ -64,6 +64,27 @@ OutputController::~OutputController() {
     setRelayGPIO(false);
 }
 
+// Initialize (can be called to reset state)
+void OutputController::init() {
+    // Reset state
+    state_ = OutputState::STOPPED;
+    syncing_ = false;
+    last_clock_us_ = 0;
+    clocks_sent_ = 0;
+    relay_on_ = false;
+    relay_on_time_us_ = 0;
+    
+    // Reset statistics
+    timer_stats_ = {};
+    relay_stats_ = {};
+    midi_stats_ = {};
+    network_stats_ = {};
+    
+    // Recalculate intervals
+    updateOutputInterval();
+    timer_interval_us_ = calculateTimerInterval(timer_bpm_, config_.midi_ppqn);
+}
+
 // ========== DES-I-013: Output Trigger Interface ==========
 
 bool OutputController::sendMIDIClock() {
@@ -312,6 +333,10 @@ void OutputController::setRelayGPIO(bool high) {
 }
 
 bool OutputController::getRelayGPIO() const {
+    return relay_on_;
+}
+
+bool OutputController::isRelayActive() const {
     return relay_on_;
 }
 

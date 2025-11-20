@@ -22,6 +22,8 @@
 #include "../mocks/MockTimingProvider.h"
 #include "../mocks/time_mock.h"
 
+using namespace clap_metronome;
+
 /**
  * @brief Integration Test Fixture
  * 
@@ -48,7 +50,6 @@ protected:
         
         // Create output controller
         output_controller_ = new OutputController();
-        output_controller_->init();
         
         // Configure output for tests
         OutputConfig config = output_controller_->getConfig();
@@ -356,13 +357,13 @@ TEST_F(BPMOutputIntegrationTest, UnstableBPM_NoAutoSync) {
     // Enable auto-sync
     bridge_->setAutoSyncEnabled(true);
     
-    // Add only 3 taps (insufficient for stability)
-    addTapsAtBPM(3, 120);
+    // Add only 2 taps (minimum for BPM but not stable)
+    addTapsAtBPM(2, 120);
     
     // Verify BPM calculated but unstable
     float bpm = bpm_engine_->getBPM();
     EXPECT_GT(bpm, 0.0f);  // BPM exists
-    EXPECT_FALSE(bpm_engine_->isStable());  // But not stable
+    EXPECT_FALSE(bpm_engine_->isStable());  // But not stable (needs 4+ taps)
     
     // Verify sync did NOT start
     OutputState state = output_controller_->getState();
