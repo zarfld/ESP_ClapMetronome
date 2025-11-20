@@ -136,6 +136,23 @@ target_link_libraries(test_clear_reset PRIVATE
     GTest::gtest_main
 )
 
+# Test 7: Callback Notifications
+add_executable(test_callback_notifications
+    test_callback_notifications.cpp
+    ${BPM_SOURCES}
+)
+
+target_include_directories(test_callback_notifications PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../src
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/interfaces
+)
+
+target_link_libraries(test_callback_notifications PRIVATE
+    GTest::gtest
+    GTest::gtest_main
+)
+
 # ===== Test Discovery =====
 include(GoogleTest)
 gtest_discover_tests(test_basic_taps)
@@ -144,3 +161,4 @@ gtest_discover_tests(test_stability)
 gtest_discover_tests(test_tempo_correction)
 gtest_discover_tests(test_interval_validation)
 gtest_discover_tests(test_clear_reset)
+gtest_discover_tests(test_callback_notifications)

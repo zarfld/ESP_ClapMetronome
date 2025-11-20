@@ -155,6 +155,9 @@ void BPMCalculation::calculateBPM() {
         state_.is_stable = false;
         state_.coefficient_of_variation = 0.0f;
     }
+    
+    // Fire callback when BPM changes (AC-BPM-014)
+    fireBPMUpdateCallback();
 }
 
 uint64_t BPMCalculation::calculateAverageInterval() {
@@ -340,5 +343,18 @@ void BPMCalculation::applyDoubleTempoCorrection(uint64_t baseline_interval_us) {
 }
 
 void BPMCalculation::fireBPMUpdateCallback() {
-    // Stub
+    // GREEN: Fire callback if registered (AC-BPM-014)
+    if (!bpm_update_callback_) {
+        return; // No callback registered
+    }
+    
+    // Create event with current state
+    BPMUpdateEvent event;
+    event.bpm = state_.current_bpm;
+    event.is_stable = state_.is_stable;
+    event.timestamp_us = state_.last_tap_us;
+    event.tap_count = state_.tap_count;
+    
+    // Invoke callback
+    bpm_update_callback_(event);
 }
