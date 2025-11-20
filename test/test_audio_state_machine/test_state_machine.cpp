@@ -63,20 +63,24 @@ TEST_F(StateMachineTest, InitialStateIsIdle) {
 /**
  * TEST 2: Transition IDLE → RISING on threshold crossing
  * 
- * Given: State = IDLE, threshold = 50 (initial), window initialized to 2000
- * When: ADC value exceeds adaptive threshold
+ * Given: State = IDLE, window initialized with zeros
+ * When: ADC value exceeds adaptive threshold + margin + noise floor
  * Then: State = RISING
  * 
- * Note: After first high sample, threshold adapts:
- * - Sample 3000: min=2000, max=3000, threshold = 0.8*1000+2000 = 2800
- * - Next sample 3000 > 2800, triggers RISING
+ * Note: With zero-init window, establish baseline first:
+ * - Feed 50 samples of ~500 to establish min=500, max=500, threshold=500
+ * - Then sample 1000 > (500 + 80 margin) and > (100 noise + 200 min) triggers RISING
  */
 TEST_F(StateMachineTest, IdleToRisingOnThresholdCrossing) {
-    // Arrange: Initial state
+    // Arrange: Establish baseline with low samples
+    for (int i = 0; i < 50; i++) {
+        audio_->processSample(500);  // Low baseline
+        mock_timing_.advanceTime(125);   // 8kHz sampling
+    }
     EXPECT_EQ(DetectionState::IDLE, audio_->getState());
     
-    // Act: Feed high sample that will trigger after threshold adapts
-    audio_->processSample(3000);  // High value
+    // Act: Feed high sample that exceeds threshold + margin + noise floor
+    audio_->processSample(1000);  // High value > (500+80) and > (100+200)
     
     // Assert: State changed to RISING_EDGE
     EXPECT_EQ(DetectionState::RISING_EDGE, audio_->getState())
@@ -120,23 +124,28 @@ TEST_F(StateMachineTest, StayInIdleBelowThreshold) {
  * Then: State = TRIGGERED, beat event emitted
  */
 TEST_F(StateMachineTest, RisingToTriggeredOnPeak) {
-    // Arrange: Get to RISING state with high values
+    // Arrange: Establish baseline and get to RISING state
+    for (int i = 0; i < 50; i++) {
+        audio_->processSample(500);  // Low baseline
+        mock_timing_.advanceTime(125);
+    }
+    
     bool beat_fired = false;
     audio_->onBeat([&beat_fired](const BeatEvent& event) {
         beat_fired = true;
         (void)event;
     });
     
-    audio_->processSample(3000);  // IDLE → RISING_EDGE
+    audio_->processSample(1000);  // IDLE → RISING_EDGE
     EXPECT_EQ(DetectionState::RISING_EDGE, audio_->getState());
     
     // Act: Continue rising then peak
     mock_timing_.advanceTime(1000);
-    audio_->processSample(3200);  // Still rising
+    audio_->processSample(1200);  // Still rising
     mock_timing_.advanceTime(1000);
-    audio_->processSample(3500);  // Peak
+    audio_->processSample(1500);  // Peak
     mock_timing_.advanceTime(1000);
-    audio_->processSample(3400);  // Starting to fall → trigger
+    audio_->processSample(1400);  // Starting to fall → trigger
     
     // Assert: Transitioned to TRIGGERED and beat emitted
     EXPECT_EQ(DetectionState::TRIGGERED, audio_->getState())
