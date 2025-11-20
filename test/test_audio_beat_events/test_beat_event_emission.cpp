@@ -31,6 +31,7 @@ class BeatEventEmissionTest : public ::testing::Test {
 protected:
     MockTimingProvider mock_timing_;
     AudioDetection* audio_;
+    bool baseline_established_ = false;
     
     void SetUp() override {
         audio_ = new AudioDetection(&mock_timing_);
@@ -42,8 +43,19 @@ protected:
         delete audio_;
     }
     
+    // Helper: Establish baseline threshold (needed for zero-initialized window)
+    void establishBaseline() {
+        if (baseline_established_) return;  // Only do once per test
+        for (int i = 0; i < 50; i++) {
+            audio_->processSample(500);  // Low baseline
+            mock_timing_.advanceTime(125);  // 8kHz sampling
+        }
+        baseline_established_ = true;
+    }
+    
     // Helper: Simulate beat detection sequence (simplified - matches StateMachineTest pattern)
     void simulateBeat(uint16_t amplitude, uint64_t beat_timestamp_us) {
+        establishBaseline();  // Auto-establish baseline if not done
         mock_timing_.setTimestamp(beat_timestamp_us - 3000);  // 3ms before peak
         
         // Rising edge: amplitude crosses threshold (IDLE → RISING)
@@ -73,6 +85,8 @@ protected:
  * Then: Callback invoked exactly once
  */
 TEST_F(BeatEventEmissionTest, CallbackFiredOnBeatDetection) {
+    establishBaseline();  // Establish threshold baseline
+    
     int callback_count = 0;
     
     audio_->onBeat([&callback_count](const BeatEvent&) {
@@ -80,7 +94,7 @@ TEST_F(BeatEventEmissionTest, CallbackFiredOnBeatDetection) {
     });
     
     // Simulate beat
-    simulateBeat(3000, 1000000);  // 3000 ADC units at 1 second
+    simulateBeat(1000, 1000000);  // 1000 ADC units at 1 second
     
     EXPECT_EQ(1, callback_count);
 }
@@ -216,6 +230,8 @@ TEST_F(BeatEventEmissionTest, KickOnlyFalseForFastRiseTime) {
  * Then: event.kick_only = true (5ms > 4ms threshold)
  */
 TEST_F(BeatEventEmissionTest, KickOnlyTrueForSlowRiseTime) {
+    establishBaseline();  // Establish threshold baseline
+    
     bool captured_kick_only = false;  // Start with opposite
     
     audio_->onBeat([&captured_kick_only](const BeatEvent& event) {
@@ -223,30 +239,30 @@ TEST_F(BeatEventEmissionTest, KickOnlyTrueForSlowRiseTime) {
     });
     
     // Manually create 5ms rise time (>4ms threshold)
-    mock_timing_.setTimestamp(0);
+    mock_timing_.setTimestamp(10000);  // Start after baseline
     
     // Rising edge starts (IDLE → RISING)
-    audio_->processSample(3000);
+    audio_->processSample(1000);
     
     // Continue rising for 5ms total
     mock_timing_.advanceTime(1000);  // 1ms
-    audio_->processSample(3100);
+    audio_->processSample(1100);
     
     mock_timing_.advanceTime(1000);  // 2ms
-    audio_->processSample(3200);
+    audio_->processSample(1200);
     
     mock_timing_.advanceTime(1000);  // 3ms
-    audio_->processSample(3300);
+    audio_->processSample(1300);
     
     mock_timing_.advanceTime(1000);  // 4ms
-    audio_->processSample(3400);
+    audio_->processSample(1400);
     
     mock_timing_.advanceTime(1000);  // 5ms - peak reached
-    audio_->processSample(3500);
+    audio_->processSample(1500);
     
     // Start falling (RISING → TRIGGERED, rise_time = 5ms > 4ms)
     mock_timing_.advanceTime(1000);  // 6ms
-    audio_->processSample(3400);
+    audio_->processSample(1400);
     
     EXPECT_TRUE(captured_kick_only);
 }
