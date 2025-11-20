@@ -119,6 +119,23 @@ target_link_libraries(test_interval_validation PRIVATE
     GTest::gtest_main
 )
 
+# Test 6: Clear/Reset
+add_executable(test_clear_reset
+    test_clear_reset.cpp
+    ${BPM_SOURCES}
+)
+
+target_include_directories(test_clear_reset PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../src
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/interfaces
+)
+
+target_link_libraries(test_clear_reset PRIVATE
+    GTest::gtest
+    GTest::gtest_main
+)
+
 # ===== Test Discovery =====
 include(GoogleTest)
 gtest_discover_tests(test_basic_taps)
@@ -126,3 +143,4 @@ gtest_discover_tests(test_circular_buffer)
 gtest_discover_tests(test_stability)
 gtest_discover_tests(test_tempo_correction)
 gtest_discover_tests(test_interval_validation)
+gtest_discover_tests(test_clear_reset)

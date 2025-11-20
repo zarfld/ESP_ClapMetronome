@@ -67,7 +67,7 @@ void BPMCalculation::addTap(uint64_t timestamp_us) {
 }
 
 void BPMCalculation::clear() {
-    // RED: Stub implementation
+    // GREEN: Reset all BPM calculation state (AC-BPM-012)
     state_.reset();
 }
 
