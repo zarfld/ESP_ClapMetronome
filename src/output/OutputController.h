@@ -98,6 +98,9 @@ struct OutputConfig {
     // Output Mode
     OutputMode mode;                ///< Which outputs are enabled
     
+    // Timer Configuration
+    uint16_t initial_bpm;           ///< Initial BPM for timer (default 120)
+    
     /**
      * @brief Default constructor with safe defaults
      */
@@ -109,6 +112,7 @@ struct OutputConfig {
         , relay_watchdog_ms(100)     // 100ms watchdog
         , relay_debounce_ms(10)      // 10ms debounce
         , mode(OutputMode::BOTH)     // Both outputs enabled
+        , initial_bpm(120)           // 120 BPM default tempo
     {}
 };
 
@@ -138,6 +142,28 @@ struct NetworkStats {
     uint32_t bytes_sent;           ///< Total bytes transmitted
     uint32_t send_failures;        ///< Failed transmissions
     uint32_t last_latency_us;      ///< Last send latency (microseconds)
+};
+
+/**
+ * @brief Timer Configuration (AC-OUT-007, AC-OUT-010)
+ */
+struct TimerConfig {
+    uint32_t interval_us;          ///< Timer interval in microseconds
+    bool enabled;                  ///< Timer is active
+    uint16_t bpm;                  ///< Current BPM
+    uint8_t ppqn;                  ///< Pulses per quarter note (24)
+};
+
+/**
+ * @brief Timer Statistics (Performance Monitoring)
+ */
+struct TimerStats {
+    uint32_t total_interrupts;     ///< Total ISR invocations
+    uint32_t clocks_sent;          ///< Successful clock transmissions
+    uint32_t missed_clocks;        ///< Dropped due to overrun
+    float jitter_ms;               ///< Timing jitter (std deviation)
+    uint32_t avg_isr_time_us;      ///< Average ISR execution time
+    uint32_t max_isr_time_us;      ///< Maximum ISR execution time
 };
 
 /**
@@ -261,15 +287,18 @@ public:
     /**
      * @brief Set BPM for synchronized outputs
      * 
-     * Adjusts MIDI clock interval to match BPM.
+     * Adjusts MIDI clock interval and timer to match BPM.
      * Clock interval = 60 seconds / BPM / 24 PPQN
      * Example: 120 BPM → 60/120/24 = 0.020833s = 20.833ms per clock
      * 
      * AC-OUT-010: Clock interval matches BPM (24 clocks per beat)
      * 
-     * @param bpm Beats per minute (50-205 BPM)
+     * @param bpm Beats per minute (50-300 BPM)
+     * @return true if BPM set successfully
+     * 
+     * @note Replaces old void setBPM(float) - now returns bool and uses uint16_t
      */
-    void setBPM(float bpm);
+    bool setBPM(uint16_t bpm);
     
     /**
      * @brief Get current BPM
@@ -285,8 +314,10 @@ public:
      * Clocks sent at 24 PPQN based on current BPM.
      * 
      * AC-OUT-002: Send START before first clock
+     * 
+     * @return true if started successfully
      */
-    void startSync();
+    bool startSync();
     
     /**
      * @brief Stop synchronized output
@@ -294,8 +325,10 @@ public:
      * Sends MIDI STOP (0xFC) and halts timer-based clock output.
      * 
      * AC-OUT-011: Send STOP to end playback
+     * 
+     * @return true if stopped successfully
      */
-    void stopSync();
+    bool stopSync();
     
     /**
      * @brief Check if synchronized output is running
@@ -417,6 +450,88 @@ public:
      * @return true if HIGH, false if LOW
      */
     bool getRelayGPIO() const;
+    
+    // ========== Timer Control (AC-OUT-007, AC-OUT-008, AC-OUT-009, AC-OUT-010) ==========
+    
+    /**
+     * @brief Start hardware timer for clock sending
+     * 
+     * Initializes and enables hardware timer to send MIDI clocks at 24 PPQN.
+     * Timer interval calculated from current BPM.
+     * 
+     * AC-OUT-010: Clock interval = 60,000,000 µs / BPM / 24 PPQN
+     * 
+     * @return true if timer started successfully
+     */
+    bool startTimerClock();
+    
+    /**
+     * @brief Stop hardware timer
+     * 
+     * Disables hardware timer interrupts.
+     * 
+     * @return true if timer stopped successfully
+     */
+    bool stopTimerClock();
+    
+    /**
+     * @brief Get timer configuration
+     * 
+     * Returns current timer settings.
+     * 
+     * @return Timer configuration details
+     */
+    TimerConfig getTimerConfig() const;
+    
+    /**
+     * @brief Set timer interval directly
+     * 
+     * Advanced control for testing. Normally use setBPM().
+     * 
+     * @param interval_us Interval in microseconds
+     * @return true if interval set successfully
+     */
+    bool setTimerInterval(uint32_t interval_us);
+    
+    /**
+     * @brief Get timer statistics
+     * 
+     * Returns performance metrics for monitoring.
+     * 
+     * AC-OUT-007: Jitter <1ms
+     * AC-OUT-008: ISR execution <10µs
+     * AC-OUT-009: CPU usage <3%
+     * 
+     * @return Timer statistics
+     */
+    TimerStats getTimerStats() const;
+    
+    /**
+     * @brief Reset timer statistics
+     * 
+     * Clears performance counters.
+     */
+    void resetTimerStats();
+    
+    /**
+     * @brief Handle timer interrupt (called from static ISR)
+     * 
+     * Non-static method called by static ISR wrapper.
+     * Minimal work: set flag, record timestamp, increment counters.
+     * 
+     * AC-OUT-008: Execution time <10µs
+     */
+    void handleTimerInterrupt();
+    
+    /**
+     * @brief Get clock counter (0-23)
+     * 
+     * Returns current position within quarter note (24 PPQN).
+     * Wraps to 0 after 24 clocks.
+     * 
+     * @return Clock counter (0-23)
+     */
+    uint8_t getClockCounter() const;
 
 private:
     // Configuration
@@ -448,9 +563,20 @@ private:
     bool simulate_slow_network_;    ///< Simulate latency
     uint32_t simulated_delay_us_;   ///< Artificial network delay
     
+    // Timer state (OUT-03)
+    bool timer_enabled_;            ///< Hardware timer is active
+    uint32_t timer_interval_us_;    ///< Timer period in microseconds
+    uint16_t timer_bpm_;            ///< Current BPM for timer
+    uint8_t clock_counter_;         ///< Clock position within quarter note (0-23)
+    TimerStats timer_stats_;        ///< Performance statistics
+    uint64_t last_timer_us_;        ///< Last timer ISR timestamp
+    std::vector<uint32_t> interval_samples_;  ///< For jitter calculation
+    
     // Helper methods
     void updateOutputInterval();    ///< Recalculate interval from BPM
     void processTimers();           ///< Process MIDI/relay timers (call in loop)
+    uint32_t calculateTimerInterval(uint16_t bpm, uint8_t ppqn);  ///< BPM → interval µs
+    void updateJitterStats();       ///< Calculate jitter from interval samples
     
     // Network helpers (OUT-02)
     bool initializeNetwork();       ///< Open UDP socket

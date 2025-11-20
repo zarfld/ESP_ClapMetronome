@@ -8,6 +8,7 @@
  */
 
 #include "OutputController.h"
+#include <cmath>  // For sqrtf
 
 #ifdef NATIVE_BUILD
 #include "mocks/time_mock.h"
@@ -19,7 +20,7 @@
 OutputController::OutputController(const OutputConfig& config)
     : config_(config)
     , state_(OutputState::STOPPED)
-    , current_bpm_(120.0f)
+    , current_bpm_(config.initial_bpm)
     , syncing_(false)
     , last_clock_us_(0)
     , clock_interval_us_(20833)  // 120 BPM, 24 PPQN → 20.833ms per clock
@@ -33,9 +34,18 @@ OutputController::OutputController(const OutputConfig& config)
     , simulate_network_failure_(false)
     , simulate_slow_network_(false)
     , simulated_delay_us_(0)
+    , timer_enabled_(false)
+    , timer_interval_us_(0)
+    , timer_bpm_(config.initial_bpm)
+    , clock_counter_(0)
+    , timer_stats_{}
+    , last_timer_us_(0)
 {
     updateOutputInterval();
     initializeNetwork();
+    
+    // Initialize timer interval
+    timer_interval_us_ = calculateTimerInterval(timer_bpm_, config_.midi_ppqn);
 }
 
 // Destructor
@@ -118,33 +128,42 @@ bool OutputController::isEnabled() const {
 
 // ========== BPM Synchronization ==========
 
-void OutputController::setBPM(float bpm) {
-    if (bpm >= 50.0f && bpm <= 205.0f) {
-        current_bpm_ = bpm;
-        updateOutputInterval();
-    }
-}
-
 float OutputController::getBPM() const {
     return current_bpm_;
 }
 
-void OutputController::startSync() {
+bool OutputController::startSync() {
     if (config_.mode != OutputMode::DISABLED && 
         config_.mode != OutputMode::RELAY_ONLY) {
-        sendMIDIStart();
+        if (!sendMIDIStart()) {
+            return false;
+        }
     }
+    
+    // Start timer-based clock sending
+    if (!startTimerClock()) {
+        return false;
+    }
+    
     state_ = OutputState::RUNNING;
     syncing_ = true;
+    return true;
 }
 
-void OutputController::stopSync() {
+bool OutputController::stopSync() {
+    // Stop timer-based clock sending
+    stopTimerClock();
+    
     if (config_.mode != OutputMode::DISABLED && 
         config_.mode != OutputMode::RELAY_ONLY) {
-        sendMIDIStop();
+        if (!sendMIDIStop()) {
+            return false;
+        }
     }
+    
     state_ = OutputState::STOPPED;
     syncing_ = false;
+    return true;
 }
 
 bool OutputController::isSyncing() const {
@@ -327,4 +346,146 @@ void OutputController::processTimers() {
 
 void OutputController::transitionToState(OutputState new_state) {
     state_ = new_state;
+}
+
+// ========== Timer Control (OUT-03 RED) ==========
+
+bool OutputController::startTimerClock() {
+    // RED: Stub - will initialize hardware timer
+    timer_enabled_ = true;
+    return true;
+}
+
+bool OutputController::stopTimerClock() {
+    // RED: Stub - will disable hardware timer
+    timer_enabled_ = false;
+    return true;
+}
+
+bool OutputController::setBPM(uint16_t bpm) {
+    // RED: Stub - will reconfigure timer interval
+    timer_bpm_ = bpm;
+    timer_interval_us_ = calculateTimerInterval(bpm, config_.midi_ppqn);
+    return true;
+}
+
+TimerConfig OutputController::getTimerConfig() const {
+    TimerConfig config;
+    config.interval_us = timer_interval_us_;
+    config.enabled = timer_enabled_;
+    config.bpm = timer_bpm_;
+    config.ppqn = config_.midi_ppqn;
+    return config;
+}
+
+bool OutputController::setTimerInterval(uint32_t interval_us) {
+    // RED: Stub - will set timer interval directly
+    timer_interval_us_ = interval_us;
+    return true;
+}
+
+TimerStats OutputController::getTimerStats() const {
+    return timer_stats_;
+}
+
+void OutputController::resetTimerStats() {
+    timer_stats_ = TimerStats{};
+    interval_samples_.clear();
+}
+
+void OutputController::handleTimerInterrupt() {
+    // RED: Stub - will handle ISR
+    uint64_t isr_start = micros();
+    
+    // Increment interrupt counter
+    timer_stats_.total_interrupts++;
+    
+    // Send MIDI clock
+    if (sendMIDIClock()) {
+        timer_stats_.clocks_sent++;
+        
+        // Increment clock counter (wraps at 24 PPQN)
+        clock_counter_++;
+        if (clock_counter_ >= config_.midi_ppqn) {
+            clock_counter_ = 0;
+        }
+    } else {
+        timer_stats_.missed_clocks++;
+    }
+    
+    // Record timestamp for jitter calculation
+    uint64_t current_us = micros();
+    if (last_timer_us_ > 0) {
+        uint32_t actual_interval = static_cast<uint32_t>(current_us - last_timer_us_);
+        interval_samples_.push_back(actual_interval);
+        
+        // Keep last 100 samples for jitter calculation
+        if (interval_samples_.size() > 100) {
+            interval_samples_.erase(interval_samples_.begin());
+        }
+        
+        updateJitterStats();
+    }
+    last_timer_us_ = current_us;
+    
+    // Measure ISR execution time
+    uint64_t isr_end = micros();
+    uint32_t isr_time = static_cast<uint32_t>(isr_end - isr_start);
+    
+    // Update ISR time stats
+    if (timer_stats_.total_interrupts == 1) {
+        timer_stats_.avg_isr_time_us = isr_time;
+        timer_stats_.max_isr_time_us = isr_time;
+    } else {
+        // Running average
+        timer_stats_.avg_isr_time_us = 
+            (timer_stats_.avg_isr_time_us * (timer_stats_.total_interrupts - 1) + isr_time) 
+            / timer_stats_.total_interrupts;
+        
+        if (isr_time > timer_stats_.max_isr_time_us) {
+            timer_stats_.max_isr_time_us = isr_time;
+        }
+    }
+}
+
+uint8_t OutputController::getClockCounter() const {
+    return clock_counter_;
+}
+
+uint32_t OutputController::calculateTimerInterval(uint16_t bpm, uint8_t ppqn) {
+    // Calculate interval in microseconds:
+    // 60 seconds/minute × 1,000,000 µs/second ÷ BPM ÷ PPQN
+    // = 60,000,000 / BPM / PPQN
+    
+    if (bpm == 0 || ppqn == 0) {
+        return 20833;  // Default: 120 BPM, 24 PPQN
+    }
+    
+    uint32_t interval = 60000000UL / bpm / ppqn;
+    return interval;
+}
+
+void OutputController::updateJitterStats() {
+    if (interval_samples_.empty()) {
+        timer_stats_.jitter_ms = 0.0f;
+        return;
+    }
+    
+    // Calculate mean
+    uint64_t sum = 0;
+    for (uint32_t sample : interval_samples_) {
+        sum += sample;
+    }
+    float mean = static_cast<float>(sum) / interval_samples_.size();
+    
+    // Calculate standard deviation
+    float variance = 0.0f;
+    for (uint32_t sample : interval_samples_) {
+        float diff = static_cast<float>(sample) - mean;
+        variance += diff * diff;
+    }
+    variance /= interval_samples_.size();
+    
+    float std_dev_us = sqrtf(variance);
+    timer_stats_.jitter_ms = std_dev_us / 1000.0f;  // Convert to milliseconds
 }

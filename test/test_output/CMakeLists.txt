@@ -68,6 +68,23 @@ target_link_libraries(test_network_transport PRIVATE
     GTest::gtest_main
 )
 
+# Test 3: Timer-based Clock Sending (AC-OUT-007, AC-OUT-008, AC-OUT-009, AC-OUT-010) - OUT-03
+add_executable(test_timer_clock
+    test_timer_clock.cpp
+    ${OUTPUT_SOURCES}
+)
+
+target_include_directories(test_timer_clock PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/../..
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../src
+    ${CMAKE_CURRENT_SOURCE_DIR}/..
+)
+
+target_link_libraries(test_timer_clock PRIVATE
+    GTest::gtest
+    GTest::gtest_main
+)
+
 # NOTE: test_midi_output.cpp is temporarily disabled (uses old MIDI note API)
 # Will be updated or replaced in future cycles
 
@@ -75,3 +92,4 @@ target_link_libraries(test_network_transport PRIVATE
 include(GoogleTest)
 gtest_discover_tests(test_midi_beat_clock)
 gtest_discover_tests(test_network_transport)
+gtest_discover_tests(test_timer_clock)
