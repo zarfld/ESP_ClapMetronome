@@ -32,21 +32,38 @@ set(BPM_SOURCES
     ../../src/bpm/BPMCalculation.cpp
 )
 
-# ===== Test Executable =====
+# ===== Test Executables =====
+
+# Test 1: Basic Tap Addition
 add_executable(test_basic_taps
     test_basic_taps.cpp
     ${BPM_SOURCES}
 )
 
-# ===== Include Directories =====
 target_include_directories(test_basic_taps PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/../..       # Root (for absolute includes)
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../src   # Source root
-    ${CMAKE_CURRENT_SOURCE_DIR}/../mocks    # Mock interfaces
+    ${CMAKE_CURRENT_SOURCE_DIR}/../..
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../src
+    ${CMAKE_CURRENT_SOURCE_DIR}/../mocks
 )
 
-# ===== Link Libraries =====
 target_link_libraries(test_basic_taps PRIVATE
+    GTest::gtest
+    GTest::gtest_main
+)
+
+# Test 2: Circular Buffer & Wrap-around
+add_executable(test_circular_buffer
+    test_circular_buffer.cpp
+    ${BPM_SOURCES}
+)
+
+target_include_directories(test_circular_buffer PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/../..
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../src
+    ${CMAKE_CURRENT_SOURCE_DIR}/../mocks
+)
+
+target_link_libraries(test_circular_buffer PRIVATE
     GTest::gtest
     GTest::gtest_main
 )
@@ -54,3 +71,4 @@ target_link_libraries(test_basic_taps PRIVATE
 # ===== Test Discovery =====
 include(GoogleTest)
 gtest_discover_tests(test_basic_taps)
+gtest_discover_tests(test_circular_buffer)
