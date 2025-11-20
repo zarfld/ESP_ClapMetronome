@@ -102,9 +102,27 @@ target_link_libraries(test_tempo_correction PRIVATE
     GTest::gtest_main
 )
 
+# Test 5: Invalid Interval Filtering
+add_executable(test_interval_validation
+    test_interval_validation.cpp
+    ${BPM_SOURCES}
+)
+
+target_include_directories(test_interval_validation PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../src
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/interfaces
+)
+
+target_link_libraries(test_interval_validation PRIVATE
+    GTest::gtest
+    GTest::gtest_main
+)
+
 # ===== Test Discovery =====
 include(GoogleTest)
 gtest_discover_tests(test_basic_taps)
 gtest_discover_tests(test_circular_buffer)
 gtest_discover_tests(test_stability)
 gtest_discover_tests(test_tempo_correction)
+gtest_discover_tests(test_interval_validation)

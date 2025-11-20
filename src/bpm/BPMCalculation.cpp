@@ -34,7 +34,19 @@ void BPMCalculation::init() {
 // ============================================================================
 
 void BPMCalculation::addTap(uint64_t timestamp_us) {
-    // GREEN: Add tap with tempo correction in calculateBPM
+    // GREEN: Add tap with interval validation and tempo correction
+    
+    // Validate interval (skip first tap, no interval to check)
+    if (state_.last_tap_us > 0 && timestamp_us > state_.last_tap_us) {
+        uint64_t interval = timestamp_us - state_.last_tap_us;
+        
+        // Reject intervals outside valid range (AC-BPM-013)
+        if (interval < BPMCalculationState::MIN_INTERVAL_US || 
+            interval > BPMCalculationState::MAX_INTERVAL_US) {
+            // Invalid interval - reject tap, don't update state
+            return;
+        }
+    }
     
     // Add tap to circular buffer
     state_.tap_buffer[state_.write_index] = timestamp_us;
