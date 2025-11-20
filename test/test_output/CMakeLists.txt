@@ -85,6 +85,23 @@ target_link_libraries(test_timer_clock PRIVATE
     GTest::gtest_main
 )
 
+# Test 4: Relay Output (AC-OUT-005, AC-OUT-006, AC-OUT-012) - OUT-04
+add_executable(test_relay_output
+    test_relay_output.cpp
+    ${OUTPUT_SOURCES}
+)
+
+target_include_directories(test_relay_output PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/../..
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../src
+    ${CMAKE_CURRENT_SOURCE_DIR}/..
+)
+
+target_link_libraries(test_relay_output PRIVATE
+    GTest::gtest
+    GTest::gtest_main
+)
+
 # NOTE: test_midi_output.cpp is temporarily disabled (uses old MIDI note API)
 # Will be updated or replaced in future cycles
 
@@ -93,3 +110,4 @@ include(GoogleTest)
 gtest_discover_tests(test_midi_beat_clock)
 gtest_discover_tests(test_network_transport)
 gtest_discover_tests(test_timer_clock)
+gtest_discover_tests(test_relay_output)

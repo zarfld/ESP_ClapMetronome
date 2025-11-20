@@ -11,7 +11,7 @@
 #include <cmath>  // For sqrtf
 
 #ifdef NATIVE_BUILD
-#include "mocks/time_mock.h"
+#include "test/mocks/time_mock.h"
 #else
 #include <Arduino.h>
 #endif
@@ -40,17 +40,27 @@ OutputController::OutputController(const OutputConfig& config)
     , clock_counter_(0)
     , timer_stats_{}
     , last_timer_us_(0)
+    , relay_stats_{}
+    , relay_pulse_start_us_(0)
+    , relay_last_off_us_(0)
 {
     updateOutputInterval();
     initializeNetwork();
     
     // Initialize timer interval
     timer_interval_us_ = calculateTimerInterval(timer_bpm_, config_.midi_ppqn);
+    
+    // Ensure relay starts LOW (AC-OUT-012)
+    relay_on_ = false;
+    relay_stats_.currently_on = false;
 }
 
 // Destructor
 OutputController::~OutputController() {
     stopSync();
+    
+    // AC-OUT-012: Ensure relay GPIO LOW on destruction
+    setRelayGPIO(false);
 }
 
 // ========== DES-I-013: Output Trigger Interface ==========
@@ -114,8 +124,28 @@ bool OutputController::sendMIDIStop() {
 }
 
 bool OutputController::pulseRelay() {
-    // RED: Stub implementation
-    return false;
+    // Check if relay is enabled
+    if (config_.mode == OutputMode::DISABLED || 
+        config_.mode == OutputMode::MIDI_ONLY) {
+        return false;
+    }
+    
+    // Check debounce period (AC-OUT-005)
+    uint64_t current_us = micros();
+    if (relay_last_off_us_ > 0) {
+        uint64_t time_since_off = current_us - relay_last_off_us_;
+        if (time_since_off < static_cast<uint64_t>(config_.relay_debounce_ms * 1000)) {
+            relay_stats_.debounce_rejects++;
+            return false;  // Too soon, debounce period not elapsed
+        }
+    }
+    
+    // Trigger pulse
+    setRelayGPIO(true);
+    relay_stats_.pulse_count++;
+    relay_stats_.last_pulse_us = current_us;
+    
+    return true;
 }
 
 void OutputController::enableOutput(OutputMode mode) {
@@ -238,8 +268,18 @@ bool OutputController::sendMIDIRealTime(uint8_t message) {
 }
 
 void OutputController::setRelayGPIO(bool high) {
-    // RED: Stub for GPIO control
     relay_on_ = high;
+    relay_stats_.currently_on = high;
+    
+    if (high) {
+        // Starting new pulse
+        relay_pulse_start_us_ = micros();
+    }
+    
+#ifndef NATIVE_BUILD
+    // Actual GPIO control for hardware
+    // digitalWrite(RELAY_GPIO_PIN, high ? HIGH : LOW);
+#endif
 }
 
 bool OutputController::getRelayGPIO() const {
@@ -488,4 +528,39 @@ void OutputController::updateJitterStats() {
     
     float std_dev_us = sqrtf(variance);
     timer_stats_.jitter_ms = std_dev_us / 1000.0f;  // Convert to milliseconds
+}
+
+// ========== Relay Control (OUT-04 RED) ==========
+
+RelayStats OutputController::getRelayStats() const {
+    return relay_stats_;
+}
+
+void OutputController::resetRelayStats() {
+    relay_stats_ = RelayStats{};
+}
+
+void OutputController::processRelayWatchdog() {
+    if (!relay_on_) {
+        return;  // Nothing to process
+    }
+    
+    uint64_t current_us = micros();
+    uint64_t elapsed_us = current_us - relay_pulse_start_us_;
+    
+    // Check if pulse duration completed
+    if (elapsed_us >= static_cast<uint64_t>(config_.relay_pulse_ms * 1000)) {
+        setRelayGPIO(false);
+        relay_last_off_us_ = current_us;
+        return;
+    }
+    
+    // Check watchdog timeout (AC-OUT-006)
+    if (elapsed_us >= static_cast<uint64_t>(config_.relay_watchdog_ms * 1000)) {
+        // Watchdog fired - force OFF
+        setRelayGPIO(false);
+        relay_stats_.watchdog_triggers++;
+        relay_last_off_us_ = current_us;
+        transitionToState(OutputState::WATCHDOG);
+    }
 }

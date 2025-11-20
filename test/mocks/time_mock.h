@@ -14,10 +14,17 @@
 
 #ifdef NATIVE_BUILD
 
-// Mock time state
+// Mock time state - use inline to ensure single definition across translation units
 namespace TimeMock {
-    static uint64_t mock_micros_value = 0;
-    static bool use_real_time = false;
+    inline uint64_t& get_mock_micros() {
+        static uint64_t mock_micros_value = 0;
+        return mock_micros_value;
+    }
+    
+    inline bool& get_use_real_time() {
+        static bool use_real_time = false;
+        return use_real_time;
+    }
 }
 
 /**
@@ -26,12 +33,12 @@ namespace TimeMock {
  * @return Microseconds (µs)
  */
 inline uint64_t micros() {
-    if (TimeMock::use_real_time) {
+    if (TimeMock::get_use_real_time()) {
         static auto start = std::chrono::steady_clock::now();
         auto now = std::chrono::steady_clock::now();
         return std::chrono::duration_cast<std::chrono::microseconds>(now - start).count();
     }
-    return TimeMock::mock_micros_value;
+    return TimeMock::get_mock_micros();
 }
 
 /**
@@ -49,7 +56,7 @@ inline uint32_t millis() {
  * @param value New micros value
  */
 inline void set_mock_micros(uint64_t value) {
-    TimeMock::mock_micros_value = value;
+    TimeMock::get_mock_micros() = value;
 }
 
 /**
@@ -58,7 +65,7 @@ inline void set_mock_micros(uint64_t value) {
  * @param us Microseconds to advance
  */
 inline void advance_time_us(uint64_t us) {
-    TimeMock::mock_micros_value += us;
+    TimeMock::get_mock_micros() += us;
 }
 
 /**
@@ -67,14 +74,14 @@ inline void advance_time_us(uint64_t us) {
  * @param ms Milliseconds to advance
  */
 inline void advance_time_ms(uint32_t ms) {
-    TimeMock::mock_micros_value += static_cast<uint64_t>(ms) * 1000;
+    TimeMock::get_mock_micros() += static_cast<uint64_t>(ms) * 1000;
 }
 
 /**
  * @brief Reset mock time to zero
  */
 inline void reset_mock_time() {
-    TimeMock::mock_micros_value = 0;
+    TimeMock::get_mock_micros() = 0;
 }
 
 /**
@@ -83,7 +90,7 @@ inline void reset_mock_time() {
  * @param enable true to use real system time, false to use mock
  */
 inline void use_real_time(bool enable) {
-    TimeMock::use_real_time = enable;
+    TimeMock::get_use_real_time() = enable;
 }
 
 #else

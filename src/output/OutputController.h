@@ -167,6 +167,17 @@ struct TimerStats {
 };
 
 /**
+ * @brief Relay Statistics (Pulse Tracking)
+ */
+struct RelayStats {
+    uint32_t pulse_count;          ///< Total pulses since start
+    uint32_t watchdog_triggers;    ///< Times watchdog fired
+    uint32_t debounce_rejects;     ///< Pulses rejected by debounce
+    uint64_t last_pulse_us;        ///< Timestamp of last pulse
+    bool currently_on;             ///< Current GPIO state
+};
+
+/**
  * @brief Output State Information (for telemetry/monitoring)
  * 
  * Provides detailed state information for testing and monitoring.
@@ -532,6 +543,36 @@ public:
      * @return Clock counter (0-23)
      */
     uint8_t getClockCounter() const;
+    
+    // ========== Relay Control (AC-OUT-005, AC-OUT-006, AC-OUT-012) ==========
+    
+    /**
+     * @brief Get relay statistics
+     * 
+     * Returns pulse count, watchdog triggers, and timing info.
+     * 
+     * @return Relay statistics
+     */
+    RelayStats getRelayStats() const;
+    
+    /**
+     * @brief Reset relay statistics
+     * 
+     * Clears counters and timing data.
+     */
+    void resetRelayStats();
+    
+    /**
+     * @brief Process relay watchdog timer
+     * 
+     * Must be called periodically (e.g., in loop()) to check:
+     * - Pulse duration completion
+     * - Watchdog timeout enforcement
+     * 
+     * AC-OUT-005: Turns OFF relay after pulse_ms elapsed
+     * AC-OUT-006: Forces OFF if exceeds watchdog_ms (stuck relay)
+     */
+    void processRelayWatchdog();
 
 private:
     // Configuration
@@ -571,6 +612,11 @@ private:
     TimerStats timer_stats_;        ///< Performance statistics
     uint64_t last_timer_us_;        ///< Last timer ISR timestamp
     std::vector<uint32_t> interval_samples_;  ///< For jitter calculation
+    
+    // Relay state (OUT-04)
+    RelayStats relay_stats_;        ///< Pulse tracking statistics
+    uint64_t relay_pulse_start_us_; ///< When current pulse started
+    uint64_t relay_last_off_us_;    ///< When relay last turned OFF (for debounce)
     
     // Helper methods
     void updateOutputInterval();    ///< Recalculate interval from BPM
