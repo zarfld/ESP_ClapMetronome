@@ -35,6 +35,7 @@ class AGCTransitionsTest : public ::testing::Test {
 protected:
     MockTimingProvider mock_timing_;
     AudioDetection* audio_;
+    bool baseline_established_ = false;
     
     void SetUp() override {
         mock_timing_.reset();
@@ -44,6 +45,15 @@ protected:
     
     void TearDown() override {
         delete audio_;
+    }
+    
+    void establishBaseline() {
+        if (baseline_established_) return;
+        for (int i = 0; i < 50; i++) {
+            audio_->processSample(500);
+            mock_timing_.advanceTime(125);
+        }
+        baseline_established_ = true;
     }
 };
 
@@ -227,6 +237,8 @@ TEST_F(AGCTransitionsTest, ClippingThresholdIs4000Exclusive) {
  * Then: BeatEvent.gain_level = 0
  */
 TEST_F(AGCTransitionsTest, AGCLevelIncludedInBeatEvents) {
+    establishBaseline();
+    
     // Arrange: Reduce to GAIN_40DB via clipping
     audio_->processSample(4001);
     EXPECT_EQ(AGCLevel::GAIN_40DB, audio_->getGainLevel());
@@ -238,11 +250,11 @@ TEST_F(AGCTransitionsTest, AGCLevelIncludedInBeatEvents) {
     });
     
     // Act: Trigger a beat
-    audio_->processSample(3000);  // Start rising
+    audio_->processSample(1000);  // Start rising (adjusted from 3000)
     mock_timing_.advanceTime(1000);
-    audio_->processSample(3500);  // Peak
+    audio_->processSample(1500);  // Peak (adjusted from 3500)
     mock_timing_.advanceTime(1000);
-    audio_->processSample(3400);  // Fall → trigger
+    audio_->processSample(1400);  // Fall → trigger (adjusted from 3400)
     
     // Assert: Gain level in event (0 = GAIN_40DB)
     EXPECT_EQ(static_cast<uint8_t>(AGCLevel::GAIN_40DB), captured_gain)

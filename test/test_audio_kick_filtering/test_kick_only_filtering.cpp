@@ -65,10 +65,10 @@ protected:
      */
     void simulateBeatWithRiseTime(uint16_t peak_amplitude, uint64_t rise_time_us) {
         // CRITICAL: Use LOW baseline that won't cross threshold
-        // Window is initialized with 2000 ADC (midpoint), so we need to emit enough
-        // baseline samples to flush the window (64 samples) to establish a stable low baseline
+        // Window is initialized with zeros (AUDIO-01), so we need to emit enough
+        // baseline samples to flush the window (100 samples) to establish a stable low baseline
         // Initial threshold is 50, so 200 ADC is well below threshold + margin (130)
-        for (int i = 0; i < 70; ++i) {  // Emit 70 samples to fully flush window (size 64)
+        for (int i = 0; i < 100; ++i) {  // Emit 100 samples to fully flush window (size 100, AUDIO-01)
             detector_->processSample(200);  // Low baseline
             mockTiming_.advanceTime(1000); // 1ms between samples
         }

@@ -70,7 +70,7 @@ protected:
      * Fill window with background noise level
      */
     void fillWindow(uint16_t level) {
-        for (int i = 0; i < 64; i++) {
+        for (int i = 0; i < 100; i++) {  // AUDIO-01: Changed from 64 to 100 samples
             detector_->processSample(level);
             mock_timing_.advanceTime(62);
         }
@@ -439,25 +439,33 @@ TEST_F(NoiseRejectionTest, ThreeLayerValidation_Integration) {
     // Test Case 2: Generate proper beat that passes all layers
     beat_events_.clear();
     
-    // Background
+    // Background - return to baseline  
     for (int i = 0; i < 20; i++) {
         detector_->processSample(BASELINE);
         mock_timing_.advanceTime(62);
     }
     
-    // Strong beat: well above threshold + margin + sufficient amplitude
-    uint16_t strong_signal = static_cast<uint16_t>(threshold + 350);
-    for (int i = 0; i < 5; i++) {
-        detector_->processSample(strong_signal);
-        mock_timing_.advanceTime(62);
-    }
+    // Strong beat: Use significantly higher amplitude to ensure all layers pass
+    // threshold ≈ 1800, need > threshold+80 AND > noise_floor+200
+    uint16_t strong_signal = 2500;  // Well above any threshold/noise requirements
     
-    // Falling edge back to baseline (triggers detection)
-    for (int i = 0; i < 3; i++) {
-        uint16_t falling = static_cast<uint16_t>(strong_signal - (i + 1) * 100);
-        detector_->processSample(falling);
-        mock_timing_.advanceTime(62);
-    }
+    // Rising edge (IDLE → RISING)
+    detector_->processSample(2100);
+    mock_timing_.advanceTime(500);
+    
+    detector_->processSample(2300);
+    mock_timing_.advanceTime(500);
+    
+    // Peak
+    detector_->processSample(strong_signal);
+    mock_timing_.advanceTime(500);
+    
+    // Falling edge (RISING → TRIGGERED - this emits beat)
+    detector_->processSample(2400);
+    mock_timing_.advanceTime(500);
+    
+    detector_->processSample(2200);
+    mock_timing_.advanceTime(500);
     
     // Assert: Should detect (passes all layers)
     EXPECT_EQ(1U, beat_events_.size())
