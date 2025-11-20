@@ -68,7 +68,25 @@ target_link_libraries(test_circular_buffer PRIVATE
     GTest::gtest_main
 )
 
+# Test 3: Stability Detection (CV < 5%)
+add_executable(test_stability
+    test_stability.cpp
+    ${BPM_SOURCES}
+)
+
+target_include_directories(test_stability PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/../..
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../src
+    ${CMAKE_CURRENT_SOURCE_DIR}/../mocks
+)
+
+target_link_libraries(test_stability PRIVATE
+    GTest::gtest
+    GTest::gtest_main
+)
+
 # ===== Test Discovery =====
 include(GoogleTest)
 gtest_discover_tests(test_basic_taps)
 gtest_discover_tests(test_circular_buffer)
+gtest_discover_tests(test_stability)
