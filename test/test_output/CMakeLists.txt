@@ -102,6 +102,23 @@ target_link_libraries(test_relay_output PRIVATE
     GTest::gtest_main
 )
 
+# Test 5: Performance Validation (AC-OUT-007, AC-OUT-008, AC-OUT-009) - OUT-05
+add_executable(test_performance
+    test_performance.cpp
+    ${OUTPUT_SOURCES}
+)
+
+target_include_directories(test_performance PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/../..
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../src
+    ${CMAKE_CURRENT_SOURCE_DIR}/..
+)
+
+target_link_libraries(test_performance PRIVATE
+    GTest::gtest
+    GTest::gtest_main
+)
+
 # NOTE: test_midi_output.cpp is temporarily disabled (uses old MIDI note API)
 # Will be updated or replaced in future cycles
 
@@ -111,3 +128,4 @@ gtest_discover_tests(test_midi_beat_clock)
 gtest_discover_tests(test_network_transport)
 gtest_discover_tests(test_timer_clock)
 gtest_discover_tests(test_relay_output)
+gtest_discover_tests(test_performance)

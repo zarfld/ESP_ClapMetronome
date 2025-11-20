@@ -43,6 +43,7 @@ OutputController::OutputController(const OutputConfig& config)
     , relay_stats_{}
     , relay_pulse_start_us_(0)
     , relay_last_off_us_(0)
+    , midi_stats_{}
 {
     updateOutputInterval();
     initializeNetwork();
@@ -79,6 +80,8 @@ bool OutputController::sendMIDIClock() {
     bool result = sendMIDIRealTime(static_cast<uint8_t>(MIDIClockMessage::TIMING_CLOCK));
     if (result) {
         clocks_sent_++;
+        midi_stats_.clock_messages_sent++;
+        midi_stats_.last_message_us = micros();
     }
     return result;
 }
@@ -101,6 +104,8 @@ bool OutputController::sendMIDIStart() {
     bool result = sendMIDIRealTime(static_cast<uint8_t>(MIDIClockMessage::START));
     if (result) {
         clocks_sent_ = 0;
+        midi_stats_.start_messages_sent++;
+        midi_stats_.last_message_us = micros();
     }
     return result;
 }
@@ -120,7 +125,12 @@ bool OutputController::sendMIDIStop() {
         return false;
     }
     
-    return sendMIDIRealTime(static_cast<uint8_t>(MIDIClockMessage::STOP));
+    bool result = sendMIDIRealTime(static_cast<uint8_t>(MIDIClockMessage::STOP));
+    if (result) {
+        midi_stats_.stop_messages_sent++;
+        midi_stats_.last_message_us = micros();
+    }
+    return result;
 }
 
 bool OutputController::pulseRelay() {
@@ -178,6 +188,25 @@ bool OutputController::startSync() {
     state_ = OutputState::RUNNING;
     syncing_ = true;
     return true;
+}
+
+bool OutputController::startSync(uint16_t bpm) {
+    setBPM(bpm);
+    return startSync();
+}
+
+void OutputController::updateBPM(uint16_t bpm) {
+    if (bpm < 40 || bpm > 240) return;  // Validate range
+    
+    current_bpm_ = static_cast<float>(bpm);
+    timer_bpm_ = bpm;
+    
+    // Recalculate timer interval
+    timer_interval_us_ = calculateTimerInterval(bpm, config_.midi_ppqn);
+    timer_stats_.interval_us = timer_interval_us_;
+    
+    // Update clock interval
+    updateOutputInterval();
 }
 
 bool OutputController::stopSync() {
@@ -492,7 +521,7 @@ uint8_t OutputController::getClockCounter() const {
     return clock_counter_;
 }
 
-uint32_t OutputController::calculateTimerInterval(uint16_t bpm, uint8_t ppqn) {
+uint32_t OutputController::calculateTimerInterval(uint16_t bpm, uint8_t ppqn) const {
     // Calculate interval in microseconds:
     // 60 seconds/minute × 1,000,000 µs/second ÷ BPM ÷ PPQN
     // = 60,000,000 / BPM / PPQN
@@ -538,6 +567,42 @@ RelayStats OutputController::getRelayStats() const {
 
 void OutputController::resetRelayStats() {
     relay_stats_ = RelayStats{};
+}
+
+MidiStats OutputController::getMidiStats() const {
+    return midi_stats_;
+}
+
+void OutputController::onTimerCallback() {
+    // Send MIDI clock if enabled
+    if (syncing_ && (config_.mode == OutputMode::MIDI_ONLY || config_.mode == OutputMode::BOTH)) {
+        sendMIDIClock();
+    }
+    
+    // Update clock counter
+    clock_counter_++;
+    if (clock_counter_ >= config_.midi_ppqn) {
+        clock_counter_ = 0;
+    }
+    
+    // Track timing for jitter calculation
+    uint64_t current_us = micros();
+    if (last_timer_us_ > 0) {
+        uint32_t interval = static_cast<uint32_t>(current_us - last_timer_us_);
+        interval_samples_.push_back(interval);
+        
+        // Keep only last 100 samples
+        if (interval_samples_.size() > 100) {
+            interval_samples_.erase(interval_samples_.begin());
+        }
+        
+        updateJitterStats();
+    }
+    last_timer_us_ = current_us;
+    
+    timer_stats_.total_interrupts++;
+    timer_stats_.callbacks_processed = timer_stats_.total_interrupts;  // Keep in sync
+    timer_stats_.clocks_sent++;
 }
 
 void OutputController::processRelayWatchdog() {

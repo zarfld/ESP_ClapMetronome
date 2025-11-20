@@ -164,6 +164,9 @@ struct TimerStats {
     float jitter_ms;               ///< Timing jitter (std deviation)
     uint32_t avg_isr_time_us;      ///< Average ISR execution time
     uint32_t max_isr_time_us;      ///< Maximum ISR execution time
+    uint32_t callbacks_processed;  ///< Alias for total_interrupts (for compatibility)
+    uint32_t interval_us;          ///< Current timer interval
+    bool timer_running;            ///< Timer is active
 };
 
 /**
@@ -175,6 +178,17 @@ struct RelayStats {
     uint32_t debounce_rejects;     ///< Pulses rejected by debounce
     uint64_t last_pulse_us;        ///< Timestamp of last pulse
     bool currently_on;             ///< Current GPIO state
+};
+
+/**
+ * @brief MIDI Statistics (Message Tracking)
+ */
+struct MidiStats {
+    uint32_t clock_messages_sent;      ///< 0xF8 timing clocks sent
+    uint32_t start_messages_sent;      ///< 0xFA start messages sent
+    uint32_t stop_messages_sent;       ///< 0xFC stop messages sent
+    uint32_t continue_messages_sent;   ///< 0xFB continue messages sent
+    uint64_t last_message_us;          ///< Timestamp of last MIDI message
 };
 
 /**
@@ -319,6 +333,15 @@ public:
     float getBPM() const;
     
     /**
+     * @brief Update BPM dynamically
+     * 
+     * Changes BPM while sync is running. Recalculates timer interval.
+     * 
+     * @param bpm New BPM value (40-240)
+     */
+    void updateBPM(uint16_t bpm);
+    
+    /**
      * @brief Start synchronized output
      * 
      * Sends MIDI START (0xFA) and begins timer-based periodic clock output.
@@ -329,6 +352,16 @@ public:
      * @return true if started successfully
      */
     bool startSync();
+    
+    /**
+     * @brief Start synchronized output with specific BPM
+     * 
+     * Sets BPM and starts synchronized output in one call.
+     * 
+     * @param bpm Beats per minute (40-240)
+     * @return true if started successfully
+     */
+    bool startSync(uint16_t bpm);
     
     /**
      * @brief Stop synchronized output
@@ -403,6 +436,15 @@ public:
      * @return Network transmission statistics
      */
     NetworkStats getNetworkStats() const;
+    
+    /**
+     * @brief Get MIDI statistics
+     * 
+     * Returns MIDI message counts and timing.
+     * 
+     * @return MIDI transmission statistics
+     */
+    MidiStats getMidiStats() const;
     
     /**
      * @brief Get last sent packet (for testing)
@@ -544,6 +586,26 @@ public:
      */
     uint8_t getClockCounter() const;
     
+    /**
+     * @brief Timer callback for synchronized clock output
+     * 
+     * Called by hardware timer ISR or test framework.
+     * Sends MIDI clock and handles relay timing.
+     */
+    void onTimerCallback();
+    
+    /**
+     * @brief Calculate timer interval from BPM (public for testing)
+     * 
+     * Calculates microseconds per clock pulse based on BPM and PPQN.
+     * Formula: 60,000,000 / BPM / PPQN
+     * 
+     * @param bpm Beats per minute
+     * @param ppqn Pulses per quarter note (24 = standard)
+     * @return Timer interval in microseconds
+     */
+    uint32_t calculateTimerInterval(uint16_t bpm, uint8_t ppqn) const;
+    
     // ========== Relay Control (AC-OUT-005, AC-OUT-006, AC-OUT-012) ==========
     
     /**
@@ -618,10 +680,12 @@ private:
     uint64_t relay_pulse_start_us_; ///< When current pulse started
     uint64_t relay_last_off_us_;    ///< When relay last turned OFF (for debounce)
     
+    // MIDI statistics (OUT-05)
+    MidiStats midi_stats_;          ///< MIDI message tracking
+    
     // Helper methods
     void updateOutputInterval();    ///< Recalculate interval from BPM
     void processTimers();           ///< Process MIDI/relay timers (call in loop)
-    uint32_t calculateTimerInterval(uint16_t bpm, uint8_t ppqn);  ///< BPM → interval µs
     void updateJitterStats();       ///< Calculate jitter from interval samples
     
     // Network helpers (OUT-02)
