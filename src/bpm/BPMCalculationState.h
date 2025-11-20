@@ -60,6 +60,7 @@ struct BPMCalculationState {
     // ===== Tempo Correction State =====
     uint8_t half_tempo_count;                         ///< Consecutive intervals ~2× average (0-5)
     uint8_t double_tempo_count;                       ///< Consecutive intervals ~0.5× average (0-5)
+    bool tempo_correction_applied;                    ///< Flag to prevent re-applying correction
     
     // ===== Constants =====
     static constexpr uint64_t MIN_INTERVAL_US = 100000;   ///< 100ms = 600 BPM max
@@ -82,6 +83,7 @@ struct BPMCalculationState {
         coefficient_of_variation = 0.0f;
         half_tempo_count = 0;
         double_tempo_count = 0;
+        tempo_correction_applied = false;
         
         // Initialize buffer to zeros
         for (uint8_t i = 0; i < MAX_TAPS; ++i) {

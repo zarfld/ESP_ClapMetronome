@@ -85,8 +85,26 @@ target_link_libraries(test_stability PRIVATE
     GTest::gtest_main
 )
 
+# Test 4: Half/Double Tempo Correction
+add_executable(test_tempo_correction
+    test_tempo_correction.cpp
+    ${BPM_SOURCES}
+)
+
+target_include_directories(test_tempo_correction PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/../..
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../src
+    ${CMAKE_CURRENT_SOURCE_DIR}/../mocks
+)
+
+target_link_libraries(test_tempo_correction PRIVATE
+    GTest::gtest
+    GTest::gtest_main
+)
+
 # ===== Test Discovery =====
 include(GoogleTest)
 gtest_discover_tests(test_basic_taps)
 gtest_discover_tests(test_circular_buffer)
 gtest_discover_tests(test_stability)
+gtest_discover_tests(test_tempo_correction)

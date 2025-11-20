@@ -34,7 +34,7 @@ void BPMCalculation::init() {
 // ============================================================================
 
 void BPMCalculation::addTap(uint64_t timestamp_us) {
-    // GREEN: Basic implementation to pass tests
+    // GREEN: Add tap with tempo correction in calculateBPM
     
     // Add tap to circular buffer
     state_.tap_buffer[state_.write_index] = timestamp_us;
@@ -45,7 +45,7 @@ void BPMCalculation::addTap(uint64_t timestamp_us) {
         state_.tap_count++;
     }
     
-    // Calculate BPM if we have at least 2 taps
+    // Calculate BPM if we have at least 2 taps (includes tempo correction)
     if (state_.tap_count >= 2) {
         calculateBPM();
     }
@@ -91,7 +91,7 @@ void BPMCalculation::onBPMUpdate(std::function<void(const BPMUpdateEvent&)> call
 // ============================================================================
 
 void BPMCalculation::calculateBPM() {
-    // GREEN: Calculate BPM from average interval
+    // GREEN: Calculate BPM from average interval with tempo correction
     
     // Need at least 2 taps for an interval
     if (state_.tap_count < 2) {
@@ -112,6 +112,17 @@ void BPMCalculation::calculateBPM() {
         state_.is_stable = false;
         state_.coefficient_of_variation = 0.0f;
         return;
+    }
+    
+    // Check for tempo correction patterns (need recent intervals)
+    if (state_.tap_count >= 6 && state_.last_tap_us > 0) {
+        // Get last interval
+        uint8_t last_idx = (state_.write_index == 0) ? (BPMCalculationState::MAX_TAPS - 1) : (state_.write_index - 1);
+        uint8_t prev_idx = (last_idx == 0) ? (BPMCalculationState::MAX_TAPS - 1) : (last_idx - 1);
+        uint64_t last_interval = state_.tap_buffer[last_idx] - state_.tap_buffer[prev_idx];
+        
+        detectHalfTempo(last_interval);
+        detectDoubleTempo(last_interval);
     }
     
     // Calculate stability (need at least 3 taps for stddev)
@@ -199,19 +210,121 @@ float BPMCalculation::calculateStandardDeviation(uint64_t avg_interval) {
 }
 
 void BPMCalculation::detectHalfTempo(uint64_t current_interval) {
-    (void)current_interval;
+    // GREEN: Detect if last 5 intervals are EACH ~2× the baseline average
+    (void)current_interval;  // Not used - we analyze buffer instead
+    
+    if (state_.tap_count < 10) {
+        return;  // Need baseline + detection intervals
+    }
+    
+    // Calculate baseline from FIRST 5 intervals (fixed window to avoid drift)
+    // This ensures baseline isn't polluted by previous tempo anomalies
+    uint64_t baseline_sum = 0;
+    uint8_t baseline_count = 0;
+    
+    // Use first 6 taps (gives 5 intervals) for baseline
+    for (uint8_t i = 1; i < 6 && i < state_.tap_count; ++i) {
+        if (state_.tap_buffer[i] > state_.tap_buffer[i-1]) {
+            baseline_sum += (state_.tap_buffer[i] - state_.tap_buffer[i-1]);
+            baseline_count++;
+        }
+    }
+    
+    if (baseline_count == 0) return;
+    
+    uint64_t baseline_avg = baseline_sum / baseline_count;
+    
+    // Count how many of last 5 intervals are >= 1.8× baseline (HALF_TEMPO_RATIO)
+    uint8_t slow_interval_count = 0;
+    
+    for (uint8_t i = state_.tap_count - 5; i < state_.tap_count; ++i) {
+        if (i > 0 && state_.tap_buffer[i] > state_.tap_buffer[i-1]) {
+            uint64_t interval = state_.tap_buffer[i] - state_.tap_buffer[i-1];
+            float ratio = static_cast<float>(interval) / static_cast<float>(baseline_avg);
+            
+            if (ratio >= BPMCalculationState::HALF_TEMPO_RATIO) {
+                slow_interval_count++;
+            }
+        }
+    }
+    
+    // Require AT LEAST 5 consecutive slow intervals to trigger correction
+    if (slow_interval_count >= BPMCalculationState::TEMPO_CORRECTION_THRESHOLD) {
+        // Only apply correction once
+        if (!state_.tempo_correction_applied) {
+            applyHalfTempoCorrection(baseline_avg);
+            state_.tempo_correction_applied = true;
+        }
+    } else {
+        // Pattern broken - reset flag to allow future corrections
+        state_.tempo_correction_applied = false;
+    }
 }
 
 void BPMCalculation::detectDoubleTempo(uint64_t current_interval) {
-    (void)current_interval;
+    // GREEN: Detect if last 5 intervals are EACH ~0.5× the baseline average
+    (void)current_interval;  // Not used - we analyze buffer instead
+    
+    if (state_.tap_count < 10) {
+        return;  // Need baseline + detection intervals
+    }
+    
+    // Calculate baseline from FIRST 5 intervals (fixed window to avoid drift)
+    // This ensures baseline isn't polluted by previous tempo anomalies
+    uint64_t baseline_sum = 0;
+    uint8_t baseline_count = 0;
+    
+    // Use first 6 taps (gives 5 intervals) for baseline
+    for (uint8_t i = 1; i < 6 && i < state_.tap_count; ++i) {
+        if (state_.tap_buffer[i] > state_.tap_buffer[i-1]) {
+            baseline_sum += (state_.tap_buffer[i] - state_.tap_buffer[i-1]);
+            baseline_count++;
+        }
+    }
+    
+    if (baseline_count == 0) return;
+    
+    uint64_t baseline_avg = baseline_sum / baseline_count;
+    
+    // Count how many of last 5 intervals are <= 0.6× baseline (DOUBLE_TEMPO_RATIO)
+    uint8_t fast_interval_count = 0;
+    
+    for (uint8_t i = state_.tap_count - 5; i < state_.tap_count; ++i) {
+        if (i > 0 && state_.tap_buffer[i] > state_.tap_buffer[i-1]) {
+            uint64_t interval = state_.tap_buffer[i] - state_.tap_buffer[i-1];
+            float ratio = static_cast<float>(interval) / static_cast<float>(baseline_avg);
+            
+            if (ratio <= BPMCalculationState::DOUBLE_TEMPO_RATIO) {
+                fast_interval_count++;
+            }
+        }
+    }
+    
+    // Require AT LEAST 5 consecutive fast intervals to trigger correction
+    if (fast_interval_count >= BPMCalculationState::TEMPO_CORRECTION_THRESHOLD) {
+        // Only apply correction once
+        if (!state_.tempo_correction_applied) {
+            applyDoubleTempoCorrection(baseline_avg);
+            state_.tempo_correction_applied = true;
+        }
+    } else {
+        // Pattern broken - reset flag to allow future corrections
+        state_.tempo_correction_applied = false;
+    }
 }
 
-void BPMCalculation::applyHalfTempoCorrection() {
-    // Stub
+void BPMCalculation::applyHalfTempoCorrection(uint64_t baseline_interval_us) {
+    // GREEN: Halve baseline BPM (user tapping every other beat)
+    // Baseline tempo is correct, but current taps are 2× slower
+    float baseline_bpm = 60000000.0f / static_cast<float>(baseline_interval_us);
+    state_.current_bpm = baseline_bpm / 2.0f;
 }
 
-void BPMCalculation::applyDoubleTempoCorrection() {
-    // Stub
+void BPMCalculation::applyDoubleTempoCorrection(uint64_t baseline_interval_us) {
+    // GREEN: Double baseline BPM (user tapping twice as fast)
+    // Baseline tempo is correct, but current taps are 2× faster
+    float baseline_bpm = 60000000.0f / static_cast<float>(baseline_interval_us);
+    state_.current_bpm = baseline_bpm * 2.0f;
 }
 
 void BPMCalculation::fireBPMUpdateCallback() {

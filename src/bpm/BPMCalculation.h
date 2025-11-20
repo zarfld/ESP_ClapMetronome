@@ -174,14 +174,16 @@ private:
     void detectDoubleTempo(uint64_t current_interval);
     
     /**
-     * Apply half-tempo correction (divide BPM by 2)
+     * Apply half-tempo correction (calculate BPM from baseline tempo)
+     * @param baseline_interval_us Average interval from baseline (pre-tempo-change)
      */
-    void applyHalfTempoCorrection();
+    void applyHalfTempoCorrection(uint64_t baseline_interval_us);
     
     /**
-     * Apply double-tempo correction (multiply BPM by 2)
+     * Apply double-tempo correction (calculate BPM from baseline tempo)
+     * @param baseline_interval_us Average interval from baseline (pre-tempo-change)
      */
-    void applyDoubleTempoCorrection();
+    void applyDoubleTempoCorrection(uint64_t baseline_interval_us);
     
     /**
      * Fire BPM update callback
