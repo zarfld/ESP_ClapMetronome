@@ -360,10 +360,18 @@ def main() -> int:
                 if ref_type in ['REQ-F', 'REQ-NF']:
                     if req_type in ['ADR', 'ARC-C']:
                         requirements_with_adr.add(ref_id)
+                        print(f"Debug: {issue_id} ({req_type}) → {ref_id} ({ref_type}): Added to ADR linkage", file=sys.stderr)
                     elif req_type == 'QA-SC':
                         requirements_with_scenario.add(ref_id)
+                        print(f"Debug: {issue_id} ({req_type}) → {ref_id} ({ref_type}): Added to scenario linkage", file=sys.stderr)
                     elif req_type == 'TEST':
                         requirements_with_test.add(ref_id)
+                        print(f"Debug: {issue_id} ({req_type}) → {ref_id} ({ref_type}): Added to test linkage", file=sys.stderr)
+    
+    # Debug: Print summary
+    print(f"\nDebug: Requirements with ADR linkage: {sorted(requirements_with_adr)}", file=sys.stderr)
+    print(f"Debug: Total requirements: {len(requirements)}", file=sys.stderr)
+    print(f"Debug: ADR coverage: {len(requirements_with_adr)}/{len(requirements)} = {len(requirements_with_adr)/len(requirements)*100:.1f}%\n", file=sys.stderr)
     
     # Calculate metrics
     total_reqs = len(requirements)
