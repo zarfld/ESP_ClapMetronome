@@ -255,6 +255,14 @@ def main() -> int:
     requirements_with_test = set()
     requirements_with_any_link = set()
     
+    # First pass: collect all issue types
+    issue_types = {}  # issue_id -> type
+    for issue in all_issues:
+        issue_id = f"#{issue.number}"
+        labels = [l.name for l in issue.labels]
+        req_type = get_requirement_type(issue.title, labels)
+        issue_types[issue_id] = req_type
+    
     for issue in all_issues:
         issue_id = f"#{issue.number}"
         labels = [l.name for l in issue.labels]
@@ -297,36 +305,44 @@ def main() -> int:
             if item['references']:
                 requirements_with_any_link.add(issue_id)
             
-            # Check what this requirement links to
-            # Combine all link types for comprehensive tracking
+            # Forward linkage: Check what this requirement links to
             all_linked_issues = set()
             for link_list in links.values():
                 all_linked_issues.update(link_list)
             
             for ref_num in all_linked_issues:
-                # Fetch the referenced issue to check its type
-                try:
-                    ref_issue = repo.get_issue(ref_num)
-                    ref_labels = [l.name for l in ref_issue.labels]
-                    ref_type = get_requirement_type(ref_issue.title, ref_labels)
-                    
-                    # Track linkage to ADRs (from any link type)
-                    if ref_type == 'ADR':
-                        requirements_with_adr.add(issue_id)
-                    # Track linkage to Quality Scenarios
-                    elif ref_type == 'QA-SC':
-                        requirements_with_scenario.add(issue_id)
-                    # Also count reverse linkage (ADR/ARC-C linking to this requirement)
-                    elif req_type in ['ADR', 'ARC-C'] and ref_type in ['REQ-F', 'REQ-NF']:
-                        # This is an architecture artifact linking to a requirement
-                        requirements_with_adr.add(f"#{ref_num}")
-                except Exception as e:
-                    # Don't fail on individual issue fetch errors
-                    print(f"Debug: Could not fetch issue #{ref_num}: {e}", file=sys.stderr)
-                    pass
+                ref_id = f"#{ref_num}"
+                ref_type = issue_types.get(ref_id, 'UNKNOWN')
+                
+                # Track linkage to ADRs
+                if ref_type == 'ADR':
+                    requirements_with_adr.add(issue_id)
+                # Track linkage to Quality Scenarios
+                elif ref_type == 'QA-SC':
+                    requirements_with_scenario.add(issue_id)
+                # Track linkage to Tests
+                elif ref_type == 'TEST':
+                    requirements_with_test.add(issue_id)
+        
+        # Backward linkage: If this is an ADR/ARC-C/QA-SC/TEST linking to requirements
+        elif req_type in ['ADR', 'ARC-C', 'QA-SC', 'TEST']:
+            # Check what this artifact links to
+            all_linked_issues = set()
+            for link_list in links.values():
+                all_linked_issues.update(link_list)
             
-            if links.get('verified_by'):
-                requirements_with_test.add(issue_id)
+            for ref_num in all_linked_issues:
+                ref_id = f"#{ref_num}"
+                ref_type = issue_types.get(ref_id, 'UNKNOWN')
+                
+                # If linking to a requirement, count reverse linkage
+                if ref_type in ['REQ-F', 'REQ-NF']:
+                    if req_type in ['ADR', 'ARC-C']:
+                        requirements_with_adr.add(ref_id)
+                    elif req_type == 'QA-SC':
+                        requirements_with_scenario.add(ref_id)
+                    elif req_type == 'TEST':
+                        requirements_with_test.add(ref_id)
     
     # Calculate metrics
     total_reqs = len(requirements)
