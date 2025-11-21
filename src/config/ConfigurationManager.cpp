@@ -16,6 +16,7 @@
 
 #include "ConfigurationManager.h"
 #include <cstring>
+#include <chrono>
 
 #ifdef NATIVE_BUILD
 // Native build: NVS functions are stubbed
@@ -330,7 +331,18 @@ void ConfigurationManager::notifyChange(ConfigChangeEvent::Section section) {
     if (change_callback_) {
         ConfigChangeEvent event;
         event.section = section;
-        event.timestamp_us = 0;  // TODO: Get actual timestamp from timing provider
+        
+        // Get current timestamp in microseconds
+        #ifdef NATIVE_BUILD
+        // Native build: use std::chrono
+        auto now = std::chrono::steady_clock::now();
+        auto duration = now.time_since_epoch();
+        event.timestamp_us = std::chrono::duration_cast<std::chrono::microseconds>(duration).count();
+        #else
+        // ESP32 build: use esp_timer_get_time()
+        event.timestamp_us = esp_timer_get_time();
+        #endif
+        
         change_callback_(event);
     }
 }

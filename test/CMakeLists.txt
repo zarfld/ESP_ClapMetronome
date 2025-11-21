@@ -296,6 +296,16 @@ target_link_libraries(test_config_range_validation gtest gtest_main)
 target_compile_definitions(test_config_range_validation PRIVATE NATIVE_BUILD UNIT_TEST)
 gtest_discover_tests(test_config_range_validation)
 
+# Test 3: Change Notifications (AC-CFG-008)
+add_executable(test_config_change_notifications
+    test_config/test_change_notifications.cpp
+    ${CONFIG_SOURCES}
+)
+target_include_directories(test_config_change_notifications PRIVATE ${COMMON_INCLUDES})
+target_link_libraries(test_config_change_notifications gtest gtest_main)
+target_compile_definitions(test_config_change_notifications PRIVATE NATIVE_BUILD UNIT_TEST)
+gtest_discover_tests(test_config_change_notifications)
+
 # ============================================================================
 # CUSTOM TARGETS FOR CONVENIENT EXECUTION
 # ============================================================================
