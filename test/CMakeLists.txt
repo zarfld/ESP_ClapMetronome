@@ -286,6 +286,16 @@ target_link_libraries(test_config_default_values gtest gtest_main)
 target_compile_definitions(test_config_default_values PRIVATE NATIVE_BUILD UNIT_TEST)
 gtest_discover_tests(test_config_default_values)
 
+# Test 2: Range Validation (AC-CFG-004)
+add_executable(test_config_range_validation
+    test_config/test_range_validation.cpp
+    ${CONFIG_SOURCES}
+)
+target_include_directories(test_config_range_validation PRIVATE ${COMMON_INCLUDES})
+target_link_libraries(test_config_range_validation gtest gtest_main)
+target_compile_definitions(test_config_range_validation PRIVATE NATIVE_BUILD UNIT_TEST)
+gtest_discover_tests(test_config_range_validation)
+
 # ============================================================================
 # CUSTOM TARGETS FOR CONVENIENT EXECUTION
 # ============================================================================
