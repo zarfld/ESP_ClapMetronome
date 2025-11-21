@@ -32,35 +32,109 @@ ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / 'build' / 'traceability.json'
 
 def extract_issue_links(body: str) -> dict:
-    """Extract traceability links from issue body."""
+    """Extract traceability links from issue body.
+    
+    Handles multiple formats:
+    1. Inline bold: **Traces to**: #123
+    2. Bold with markdown: **Parent**: #1 (StR-001: Description)
+    3. Section headers with lists:
+       ## Traceability
+       **Implements Requirements**:
+       - #2 (REQ-F-001: Description)
+    4. Narrative format: **Addresses Requirements**: #2, #6, #7
+    """
     if not body:
         return {}
     
     links = defaultdict(list)
     
-    # Match various link patterns
+    # Pattern 1: Bold inline format (with or without markdown **)
+    # Matches: **Traces to**: #123 or Traces to: #123 or **Parent**: #1 (Description)
     patterns = {
-        'traces_to': r'(?:Traces to|Parent|Traces-to):\s*#(\d+)',
-        'depends_on': r'(?:Depends on|Depends-on):\s*#(\d+)',
-        'verified_by': r'(?:Verified by|Test|Verified-by):\s*#(\d+)',
-        'implemented_by': r'(?:Implemented by|Implements|Implemented-by):\s*#(\d+)',
+        'traces_to': [
+            r'\*\*(?:Traces?\s+to|Parent|Traces-to)\*\*:\s*#(\d+)',  # **Traces to**: #N
+            r'(?:^|\n)(?:Traces?\s+to|Parent|Traces-to):\s*#(\d+)',  # Traces to: #N (no bold)
+        ],
+        'depends_on': [
+            r'\*\*(?:Depends?\s+on|Depends-on)\*\*:\s*#(\d+)',
+            r'(?:^|\n)(?:Depends?\s+on|Depends-on):\s*#(\d+)',
+        ],
+        'verified_by': [
+            r'\*\*(?:Verified\s+by|Test|Verified-by|Verifies\s+Requirements?)\*\*:\s*#(\d+)',
+            r'(?:^|\n)(?:Verified\s+by|Test|Verified-by|Verifies\s+Requirements?):\s*#(\d+)',
+        ],
+        'implemented_by': [
+            r'\*\*(?:Implemented\s+by|Implements?|Implemented-by)\*\*:\s*#(\d+)',
+            r'(?:^|\n)(?:Implemented\s+by|Implements?|Implemented-by):\s*#(\d+)',
+        ],
     }
     
-    for link_type, pattern in patterns.items():
-        matches = re.findall(pattern, body, re.IGNORECASE)
+    # Pattern 2: Multi-word section labels with lists
+    # Matches: **Implements Requirements**:\n- #2 (REQ-F-001)
+    section_patterns = {
+        'traces_to': r'\*\*(?:Traces?\s+to|Parent|Satisfies|Addresses)(?:\s+Requirements?)?\*\*:[^#]*?(?:^|\n)\s*-?\s*#(\d+)',
+        'depends_on': r'\*\*(?:Depends?\s+on|Dependencies|Required)\*\*:[^#]*?(?:^|\n)\s*-?\s*#(\d+)',
+        'verified_by': r'\*\*(?:Verified\s+by|Test|Validates?|Verifies)(?:\s+Requirements?)?\*\*:[^#]*?(?:^|\n)\s*-?\s*#(\d+)',
+        'implemented_by': r'\*\*(?:Implemented\s+by|Implements?)(?:\s+Requirements?)?\*\*:[^#]*?(?:^|\n)\s*-?\s*#(\d+)',
+    }
+    
+    # Additional patterns for architecture issues
+    architecture_patterns = {
+        'traces_to': r'\*\*(?:Addresses|Satisfies)\s+Requirements?\*\*:[^#]*?#(\d+)',  # ADR pattern
+        'implemented_by': r'\*\*(?:Components?\s+Affected|Architecture\s+Decisions?)\*\*:[^#]*?#(\d+)',
+        'verified_by': r'\*\*(?:Quality\s+Scenarios?|Requirements?\s+Verified)\*\*:[^#]*?#(\d+)',
+    }
+    
+    # Extract all patterns
+    for link_type, pattern_list in patterns.items():
+        for pattern in pattern_list:
+            matches = re.findall(pattern, body, re.IGNORECASE | re.MULTILINE)
+            links[link_type].extend(int(m) for m in matches)
+    
+    for link_type, pattern in section_patterns.items():
+        matches = re.findall(pattern, body, re.IGNORECASE | re.MULTILINE | re.DOTALL)
         links[link_type].extend(int(m) for m in matches)
+    
+    for link_type, pattern in architecture_patterns.items():
+        matches = re.findall(pattern, body, re.IGNORECASE | re.MULTILINE | re.DOTALL)
+        links[link_type].extend(int(m) for m in matches)
+    
+    # Generic pattern: find all issue references in traceability sections
+    # Look for ## Traceability or ## Traces To sections and extract all #N references
+    traceability_sections = re.findall(
+        r'##\s+(?:Traceability|Traces\s+To).*?(?=##|$)',
+        body,
+        re.IGNORECASE | re.MULTILINE | re.DOTALL
+    )
+    
+    for section in traceability_sections:
+        # Extract all #N references from the section
+        all_refs = re.findall(r'#(\d+)', section)
+        # Add to traces_to if not already captured
+        for ref in all_refs:
+            ref_int = int(ref)
+            if ref_int not in links['traces_to']:
+                links['traces_to'].append(ref_int)
+    
+    # Remove duplicates while preserving order
+    for key in links:
+        links[key] = list(dict.fromkeys(links[key]))
     
     return dict(links)
 
 def get_requirement_type(title: str, labels: list) -> str:
-    """Determine requirement type from title and labels."""
-    # Extract from title prefix
-    match = re.match(r'^(StR|REQ-F|REQ-NF|ADR|ARC-C|QA-SC|TEST)', title)
-    if match:
-        return match.group(1)
+    """Determine requirement type from title and labels.
     
-    # Fallback to labels
+    Prioritizes title prefix, then checks labels (including colon-separated variants).
+    """
+    # Extract from title prefix (most reliable)
+    match = re.match(r'^(StR|REQ-F|REQ-NF|ADR|ARC-C|QA-SC|TEST)', title, re.IGNORECASE)
+    if match:
+        return match.group(1).upper()
+    
+    # Fallback to labels (handle both hyphen and colon separators)
     label_map = {
+        # Colon-separated (current project standard)
         'type:stakeholder-requirement': 'StR',
         'type:requirement:functional': 'REQ-F',
         'type:requirement:non-functional': 'REQ-NF',
@@ -68,11 +142,40 @@ def get_requirement_type(title: str, labels: list) -> str:
         'type:architecture:component': 'ARC-C',
         'type:architecture:quality-scenario': 'QA-SC',
         'type:test-case': 'TEST',
+        'type:test-plan': 'TEST',
+        
+        # Hyphen-separated (legacy/alternative)
+        'stakeholder-requirement': 'StR',
+        'functional-requirement': 'REQ-F',
+        'non-functional': 'REQ-NF',
+        'architecture-decision': 'ADR',
+        'architecture-component': 'ARC-C',
+        'quality-scenario': 'QA-SC',
+        'test-case': 'TEST',
+        'test-plan': 'TEST',
     }
     
     for label in labels:
+        # Check exact match first
         if label in label_map:
             return label_map[label]
+        
+        # Check if label contains any key as substring (partial match)
+        label_lower = label.lower()
+        if 'stakeholder' in label_lower:
+            return 'StR'
+        elif 'functional' in label_lower and 'non' not in label_lower:
+            return 'REQ-F'
+        elif 'non-functional' in label_lower:
+            return 'REQ-NF'
+        elif 'decision' in label_lower:
+            return 'ADR'
+        elif 'component' in label_lower:
+            return 'ARC-C'
+        elif 'quality' in label_lower or 'scenario' in label_lower:
+            return 'QA-SC'
+        elif 'test' in label_lower:
+            return 'TEST'
     
     return 'UNKNOWN'
 
@@ -95,6 +198,7 @@ def main() -> int:
     
     # Fetch all requirement issues
     requirement_labels = [
+        # Primary labels (colon-separated)
         'type:stakeholder-requirement',
         'type:requirement:functional',
         'type:requirement:non-functional',
@@ -102,18 +206,40 @@ def main() -> int:
         'type:architecture:component',
         'type:architecture:quality-scenario',
         'type:test-case',
+        'type:test-plan',
+        
+        # Phase labels (to catch issues tagged by phase)
+        'phase:01-stakeholder-requirements',
+        'phase:02-requirements',
+        'phase:03-architecture',
+        'phase:07-verification-validation',
     ]
     
     all_issues = []
+    seen_numbers = set()  # Avoid duplicates
+    
     for label in requirement_labels:
         try:
             issues = list(repo.get_issues(labels=[label], state='all'))
-            all_issues.extend(issues)
+            for issue in issues:
+                if issue.number not in seen_numbers:
+                    all_issues.append(issue)
+                    seen_numbers.add(issue.number)
         except Exception as e:
             print(f"Warning: Could not fetch label {label}: {e}", file=sys.stderr)
     
+    # If no labeled issues found, try fetching all open issues and filter by title prefix
     if not all_issues:
-        print("Warning: No issues found with requirement labels", file=sys.stderr)
+        print("Warning: No issues found with requirement labels, trying title-based detection...", file=sys.stderr)
+        try:
+            all_open_issues = list(repo.get_issues(state='all'))
+            for issue in all_open_issues:
+                if re.match(r'^(StR|REQ-F|REQ-NF|ADR|ARC-C|QA-SC|TEST)', issue.title, re.IGNORECASE):
+                    if issue.number not in seen_numbers:
+                        all_issues.append(issue)
+                        seen_numbers.add(issue.number)
+        except Exception as e:
+            print(f"Warning: Could not fetch all issues: {e}", file=sys.stderr)
     
     print(f"Found {len(all_issues)} requirement issues")
     
@@ -143,14 +269,19 @@ def main() -> int:
             'title': issue.title,
             'state': issue.state,
             'url': issue.html_url,
-            'references': []
+            'labels': labels,  # Include labels for debugging
+            'references': [],
+            'link_details': {}  # Categorized links for debugging
         }
         
         # Collect all referenced issues
         all_refs = set()
-        for link_list in links.values():
+        for link_type, link_list in links.items():
             all_refs.update(f"#{n}" for n in link_list)
-        item['references'] = sorted(all_refs)
+            if link_list:
+                item['link_details'][link_type] = [f"#{n}" for n in link_list]
+        
+        item['references'] = sorted(all_refs, key=lambda x: int(x[1:]))  # Sort numerically
         
         items.append(item)
         forward_links[issue_id] = item['references']
@@ -167,18 +298,31 @@ def main() -> int:
                 requirements_with_any_link.add(issue_id)
             
             # Check what this requirement links to
-            for ref_num in links.get('traces_to', []):
+            # Combine all link types for comprehensive tracking
+            all_linked_issues = set()
+            for link_list in links.values():
+                all_linked_issues.update(link_list)
+            
+            for ref_num in all_linked_issues:
                 # Fetch the referenced issue to check its type
                 try:
                     ref_issue = repo.get_issue(ref_num)
                     ref_labels = [l.name for l in ref_issue.labels]
                     ref_type = get_requirement_type(ref_issue.title, ref_labels)
                     
+                    # Track linkage to ADRs (from any link type)
                     if ref_type == 'ADR':
                         requirements_with_adr.add(issue_id)
+                    # Track linkage to Quality Scenarios
                     elif ref_type == 'QA-SC':
                         requirements_with_scenario.add(issue_id)
-                except:
+                    # Also count reverse linkage (ADR/ARC-C linking to this requirement)
+                    elif req_type in ['ADR', 'ARC-C'] and ref_type in ['REQ-F', 'REQ-NF']:
+                        # This is an architecture artifact linking to a requirement
+                        requirements_with_adr.add(f"#{ref_num}")
+                except Exception as e:
+                    # Don't fail on individual issue fetch errors
+                    print(f"Debug: Could not fetch issue #{ref_num}: {e}", file=sys.stderr)
                     pass
             
             if links.get('verified_by'):
