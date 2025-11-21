@@ -118,17 +118,39 @@ def extract_issue_links(body: str) -> dict:
     
     # Generic pattern: find all issue references in traceability sections
     # Look for various traceability section headers and extract all #N references
-    traceability_section_headers = [
+    
+    # For ## headers (level 2), match until next ## header (not ###)
+    level2_headers = [
         r'##\s+(?:Traceability|Traces\s+To)',           # ## Traceability
         r'##\s+(?:Requirements?\s+Satisfied)',          # ## Requirements Satisfied
+    ]
+    
+    for header_pattern in level2_headers:
+        sections = re.findall(
+            rf'{header_pattern}.*?(?=\n##[^#]|$)',
+            body,
+            re.IGNORECASE | re.MULTILINE | re.DOTALL
+        )
+        
+        for section in sections:
+            # Extract all #N references from the section (including subsections)
+            all_refs = re.findall(r'#(\d+)', section)
+            # Add to traces_to if not already captured
+            for ref in all_refs:
+                ref_int = int(ref)
+                if ref_int not in links['traces_to']:
+                    links['traces_to'].append(ref_int)
+    
+    # For ### headers (level 3), match until next ### or ## header
+    level3_headers = [
         r'###\s+(?:Functional\s+Requirements?)',        # ### Functional Requirements
         r'###\s+(?:Non-Functional\s+Requirements?)',    # ### Non-Functional Requirements
         r'###\s+(?:Stakeholder\s+Needs?)',              # ### Stakeholder Need
     ]
     
-    for header_pattern in traceability_section_headers:
+    for header_pattern in level3_headers:
         sections = re.findall(
-            rf'{header_pattern}.*?(?=##|###|$)',
+            rf'{header_pattern}.*?(?=\n###|\n##|$)',
             body,
             re.IGNORECASE | re.MULTILINE | re.DOTALL
         )
