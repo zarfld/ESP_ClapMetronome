@@ -46,7 +46,7 @@ else()
 endif()
 
 # ============================================================================
-# AUDIO TEST SUITES
+# AUDIO TEST SUITES (Wave 3.1)
 # ============================================================================
 
 # AUDIO-01: Adaptive Threshold (AC-AUDIO-001)
@@ -187,6 +187,85 @@ add_executable(test_adaptive_threshold_legacy
 target_include_directories(test_adaptive_threshold_legacy PRIVATE ${COMMON_INCLUDES})
 target_link_libraries(test_adaptive_threshold_legacy gtest gtest_main)
 gtest_discover_tests(test_adaptive_threshold_legacy)
+
+# ============================================================================
+# BPM TEST SUITES (Wave 3.2)
+# ============================================================================
+
+# BPM sources
+set(BPM_SOURCES
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/bpm/BPMCalculation.cpp
+)
+
+# Test 1: Basic Tap Addition (AC-BPM-001, AC-BPM-002)
+add_executable(test_bpm_basic_taps
+    test_bpm/test_basic_taps.cpp
+    ${BPM_SOURCES}
+)
+target_include_directories(test_bpm_basic_taps PRIVATE ${COMMON_INCLUDES})
+target_link_libraries(test_bpm_basic_taps gtest gtest_main)
+target_compile_definitions(test_bpm_basic_taps PRIVATE NATIVE_BUILD UNIT_TEST)
+gtest_discover_tests(test_bpm_basic_taps)
+
+# Test 2: Circular Buffer & Wrap-around (AC-BPM-001)
+add_executable(test_bpm_circular_buffer
+    test_bpm/test_circular_buffer.cpp
+    ${BPM_SOURCES}
+)
+target_include_directories(test_bpm_circular_buffer PRIVATE ${COMMON_INCLUDES})
+target_link_libraries(test_bpm_circular_buffer gtest gtest_main)
+target_compile_definitions(test_bpm_circular_buffer PRIVATE NATIVE_BUILD UNIT_TEST)
+gtest_discover_tests(test_bpm_circular_buffer)
+
+# Test 3: Stability Detection (AC-BPM-003)
+add_executable(test_bpm_stability
+    test_bpm/test_stability.cpp
+    ${BPM_SOURCES}
+)
+target_include_directories(test_bpm_stability PRIVATE ${COMMON_INCLUDES})
+target_link_libraries(test_bpm_stability gtest gtest_main)
+target_compile_definitions(test_bpm_stability PRIVATE NATIVE_BUILD UNIT_TEST)
+gtest_discover_tests(test_bpm_stability)
+
+# Test 4: Half/Double Tempo Correction (AC-BPM-004, AC-BPM-005)
+add_executable(test_bpm_tempo_correction
+    test_bpm/test_tempo_correction.cpp
+    ${BPM_SOURCES}
+)
+target_include_directories(test_bpm_tempo_correction PRIVATE ${COMMON_INCLUDES})
+target_link_libraries(test_bpm_tempo_correction gtest gtest_main)
+target_compile_definitions(test_bpm_tempo_correction PRIVATE NATIVE_BUILD UNIT_TEST)
+gtest_discover_tests(test_bpm_tempo_correction)
+
+# Test 5: Invalid Interval Filtering (AC-BPM-012, AC-BPM-013)
+add_executable(test_bpm_interval_validation
+    test_bpm/test_interval_validation.cpp
+    ${BPM_SOURCES}
+)
+target_include_directories(test_bpm_interval_validation PRIVATE ${COMMON_INCLUDES})
+target_link_libraries(test_bpm_interval_validation gtest gtest_main)
+target_compile_definitions(test_bpm_interval_validation PRIVATE NATIVE_BUILD UNIT_TEST)
+gtest_discover_tests(test_bpm_interval_validation)
+
+# Test 6: Clear/Reset (AC-BPM-007)
+add_executable(test_bpm_clear_reset
+    test_bpm/test_clear_reset.cpp
+    ${BPM_SOURCES}
+)
+target_include_directories(test_bpm_clear_reset PRIVATE ${COMMON_INCLUDES})
+target_link_libraries(test_bpm_clear_reset gtest gtest_main)
+target_compile_definitions(test_bpm_clear_reset PRIVATE NATIVE_BUILD UNIT_TEST)
+gtest_discover_tests(test_bpm_clear_reset)
+
+# Test 7: Callback Notifications (AC-BPM-008)
+add_executable(test_bpm_callback_notifications
+    test_bpm/test_callback_notifications.cpp
+    ${BPM_SOURCES}
+)
+target_include_directories(test_bpm_callback_notifications PRIVATE ${COMMON_INCLUDES})
+target_link_libraries(test_bpm_callback_notifications gtest gtest_main)
+target_compile_definitions(test_bpm_callback_notifications PRIVATE NATIVE_BUILD UNIT_TEST)
+gtest_discover_tests(test_bpm_callback_notifications)
 
 # ============================================================================
 # CUSTOM TARGETS FOR CONVENIENT EXECUTION
