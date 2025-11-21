@@ -103,14 +103,14 @@ struct OutputConfig {
  */
 struct NetworkConfig {
     bool wifi_enabled;              ///< WiFi enabled, default: true
-    std::string wifi_ssid;          ///< WiFi SSID, max 32 chars
-    std::string wifi_password;      ///< WiFi password (encrypted in NVS), max 64 chars
+    char wifi_ssid[33];             ///< WiFi SSID, max 32 chars + null terminator
+    char wifi_password[65];         ///< WiFi password (encrypted in NVS), max 64 chars + null
     
     bool mqtt_enabled;              ///< MQTT enabled, default: false
-    std::string mqtt_broker;        ///< MQTT broker hostname/IP, max 64 chars
+    char mqtt_broker[65];           ///< MQTT broker hostname/IP, max 64 chars + null
     uint16_t mqtt_port;             ///< MQTT port, valid: 1-65535, default: 1883
-    std::string mqtt_username;      ///< MQTT username, max 32 chars
-    std::string mqtt_password;      ///< MQTT password (encrypted in NVS), max 64 chars
+    char mqtt_username[33];         ///< MQTT username, max 32 chars + null
+    char mqtt_password[65];         ///< MQTT password (encrypted in NVS), max 64 chars + null
     
     bool websocket_enabled;         ///< WebSocket enabled, default: true
     
@@ -311,7 +311,7 @@ public:
     // ========================================================================
     
     /**
-     * @brief Register configuration change callback
+     * Register callback for configuration changes
      * 
      * @param callback Function to call when configuration changes
      * 
@@ -320,6 +320,14 @@ public:
      * Callback is fired after any successful configuration change.
      */
     void onConfigChange(std::function<void(const ConfigChangeEvent&)> callback);
+    
+#ifdef UNIT_TEST
+    /**
+     * Reset NVS storage (test-only helper)
+     * Clears all stored configuration data for test isolation.
+     */
+    static void resetNVSForTesting();
+#endif
     
 private:
     // Configuration state

@@ -306,6 +306,16 @@ target_link_libraries(test_config_change_notifications gtest gtest_main)
 target_compile_definitions(test_config_change_notifications PRIVATE NATIVE_BUILD UNIT_TEST)
 gtest_discover_tests(test_config_change_notifications)
 
+# Test 4: Persistence (AC-CFG-001, AC-CFG-003)
+add_executable(test_config_persistence
+    test_config/test_persistence.cpp
+    ${CONFIG_SOURCES}
+)
+target_include_directories(test_config_persistence PRIVATE ${COMMON_INCLUDES})
+target_link_libraries(test_config_persistence gtest gtest_main)
+target_compile_definitions(test_config_persistence PRIVATE NATIVE_BUILD UNIT_TEST)
+gtest_discover_tests(test_config_persistence)
+
 # ============================================================================
 # CUSTOM TARGETS FOR CONVENIENT EXECUTION
 # ============================================================================

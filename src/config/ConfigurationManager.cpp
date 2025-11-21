@@ -17,9 +17,15 @@
 #include "ConfigurationManager.h"
 #include <cstring>
 #include <chrono>
+#include <map>
+#include <vector>
+#include <string>
 
 #ifdef NATIVE_BUILD
-// Native build: NVS functions are stubbed
+// Native build: NVS functions use in-memory storage
+// Global storage (outside namespace to avoid conflicts)
+static std::map<std::string, std::vector<uint8_t>> native_nvs_storage;
+static bool native_nvs_initialized = false;
 #else
 // ESP32 build: Include actual NVS library
 #include <nvs_flash.h>
@@ -35,7 +41,8 @@ ConfigurationManager::ConfigurationManager()
 }
 
 ConfigurationManager::~ConfigurationManager() {
-    // Destructor
+    // Clear callback to avoid dangling function pointer
+    change_callback_ = nullptr;
 }
 
 // ============================================================================
@@ -183,6 +190,15 @@ void ConfigurationManager::onConfigChange(std::function<void(const ConfigChangeE
     change_callback_ = callback;
 }
 
+#ifdef UNIT_TEST
+void ConfigurationManager::resetNVSForTesting() {
+#ifdef NATIVE_BUILD
+    native_nvs_storage.clear();
+    native_nvs_initialized = false;
+#endif
+}
+#endif
+
 // ============================================================================
 // Internal Helpers
 // ============================================================================
@@ -211,13 +227,13 @@ void ConfigurationManager::loadDefaults() {
     
     // Network defaults
     network_config_.wifi_enabled = NetworkConfig::DEFAULT_WIFI_ENABLED;
-    network_config_.wifi_ssid = "";
-    network_config_.wifi_password = "";
+    network_config_.wifi_ssid[0] = '\0';
+    network_config_.wifi_password[0] = '\0';
     network_config_.mqtt_enabled = NetworkConfig::DEFAULT_MQTT_ENABLED;
-    network_config_.mqtt_broker = "";
+    network_config_.mqtt_broker[0] = '\0';
     network_config_.mqtt_port = NetworkConfig::DEFAULT_MQTT_PORT;
-    network_config_.mqtt_username = "";
-    network_config_.mqtt_password = "";
+    network_config_.mqtt_username[0] = '\0';
+    network_config_.mqtt_password[0] = '\0';
     network_config_.websocket_enabled = NetworkConfig::DEFAULT_WEBSOCKET_ENABLED;
 }
 
@@ -294,18 +310,18 @@ bool ConfigurationManager::validateOutputConfig(const OutputConfig& config) cons
 }
 
 bool ConfigurationManager::validateNetworkConfig(const NetworkConfig& config) const {
-    // SSID max 32 chars
-    if (config.wifi_ssid.length() > 32) {
+    // SSID max 32 chars (null-terminated C string)
+    if (std::strlen(config.wifi_ssid) > 32) {
         return false;
     }
     
     // WiFi password max 64 chars
-    if (config.wifi_password.length() > 64) {
+    if (std::strlen(config.wifi_password) > 64) {
         return false;
     }
     
     // MQTT broker max 64 chars
-    if (config.mqtt_broker.length() > 64) {
+    if (std::strlen(config.mqtt_broker) > 64) {
         return false;
     }
     
@@ -315,12 +331,12 @@ bool ConfigurationManager::validateNetworkConfig(const NetworkConfig& config) co
     }
     
     // MQTT username max 32 chars
-    if (config.mqtt_username.length() > 32) {
+    if (std::strlen(config.mqtt_username) > 32) {
         return false;
     }
     
     // MQTT password max 64 chars
-    if (config.mqtt_password.length() > 64) {
+    if (std::strlen(config.mqtt_password) > 64) {
         return false;
     }
     
@@ -352,25 +368,83 @@ void ConfigurationManager::notifyChange(ConfigChangeEvent::Section section) {
 // ============================================================================
 
 #ifdef NATIVE_BUILD
-// Native build: Stub NVS functions for unit testing
+// Native build: In-memory NVS storage for unit testing
 
 bool ConfigurationManager::nvsInit() {
-    // Stub: Always succeed
+    native_nvs_initialized = true;
     return true;
 }
 
 bool ConfigurationManager::nvsLoad() {
-    // Stub: Return false to trigger defaults loading
-    return false;
+    if (!native_nvs_initialized) {
+        return false;
+    }
+    
+    // Try to load each section
+    bool audio_loaded = false;
+    bool bpm_loaded = false;
+    bool output_loaded = false;
+    bool network_loaded = false;
+    
+    // Load audio config
+    auto it = native_nvs_storage.find("audio");
+    if (it != native_nvs_storage.end() && it->second.size() == sizeof(AudioConfig)) {
+        std::memcpy(&audio_config_, it->second.data(), sizeof(AudioConfig));
+        audio_loaded = true;
+    }
+    
+    // Load BPM config
+    it = native_nvs_storage.find("bpm");
+    if (it != native_nvs_storage.end() && it->second.size() == sizeof(BPMConfig)) {
+        std::memcpy(&bpm_config_, it->second.data(), sizeof(BPMConfig));
+        bpm_loaded = true;
+    }
+    
+    // Load output config
+    it = native_nvs_storage.find("output");
+    if (it != native_nvs_storage.end() && it->second.size() == sizeof(OutputConfig)) {
+        std::memcpy(&output_config_, it->second.data(), sizeof(OutputConfig));
+        output_loaded = true;
+    }
+    
+    // Load network config
+    it = native_nvs_storage.find("network");
+    if (it != native_nvs_storage.end() && it->second.size() == sizeof(NetworkConfig)) {
+        std::memcpy(&network_config_, it->second.data(), sizeof(NetworkConfig));
+        network_loaded = true;
+    }
+    
+    // Return true only if at least one section was loaded
+    return (audio_loaded || bpm_loaded || output_loaded || network_loaded);
 }
 
 bool ConfigurationManager::nvsSave() {
-    // Stub: Always succeed
+    if (!native_nvs_initialized) {
+        return false;
+    }
+    
+    // Save each section
+    std::vector<uint8_t> audio_data(sizeof(AudioConfig));
+    std::memcpy(audio_data.data(), &audio_config_, sizeof(AudioConfig));
+    native_nvs_storage["audio"] = audio_data;
+    
+    std::vector<uint8_t> bpm_data(sizeof(BPMConfig));
+    std::memcpy(bpm_data.data(), &bpm_config_, sizeof(BPMConfig));
+    native_nvs_storage["bpm"] = bpm_data;
+    
+    std::vector<uint8_t> output_data(sizeof(OutputConfig));
+    std::memcpy(output_data.data(), &output_config_, sizeof(OutputConfig));
+    native_nvs_storage["output"] = output_data;
+    
+    std::vector<uint8_t> network_data(sizeof(NetworkConfig));
+    std::memcpy(network_data.data(), &network_config_, sizeof(NetworkConfig));
+    native_nvs_storage["network"] = network_data;
+    
     return true;
 }
 
 bool ConfigurationManager::nvsErase() {
-    // Stub: Always succeed
+    native_nvs_storage.clear();
     return true;
 }
 
