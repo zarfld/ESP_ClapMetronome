@@ -42,11 +42,20 @@ def extract_issue_links(body: str) -> dict:
     if not body:
         return {'traces_to': []}
     
+    # Simple approach: Extract ALL #N references from body
+    # Trust GitHub's infrastructure - any #N is a link
+    all_refs = re.findall(r'#(\d+)', body)
+    unique_refs = sorted(set(int(ref) for ref in all_refs))
+    
+    return {'traces_to': unique_refs}
+
+def extract_issue_links_OLD_COMPLEX(body: str) -> dict:
+    """OLD COMPLEX VERSION - keeping for reference but not used"""
     links = defaultdict(list)
     
     # Pattern 1: Bold inline format (with or without markdown **)
     # Matches: **Traces to**: #123 or Traces to: #123 or **Parent**: #1 (Description)
-    patterns = {
+    patterns_OLD = {
         'traces_to': [
             r'\*\*(?:Traces?\s+to|Parent|Traces-to)\*\*:\s*#(\d+)',  # **Traces to**: #N
             r'(?:^|\n)(?:Traces?\s+to|Parent|Traces-to):\s*#(\d+)',  # Traces to: #N (no bold)
