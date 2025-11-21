@@ -138,9 +138,9 @@ def extract_issue_links(body: str) -> dict:
             all_refs = re.findall(r'#(\d+)', section)
             # Add to traces_to if not already captured
             for ref in all_refs:
-            ref_int = int(ref)
-            if ref_int not in links['traces_to']:
-                links['traces_to'].append(ref_int)
+                ref_int = int(ref)
+                if ref_int not in links['traces_to']:
+                    links['traces_to'].append(ref_int)
     
     # Remove duplicates while preserving order
     for key in links:
