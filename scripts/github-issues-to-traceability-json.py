@@ -132,6 +132,12 @@ def extract_issue_links(body: str) -> dict:
             re.IGNORECASE | re.MULTILINE | re.DOTALL
         )
         
+        if sections:
+            print(f"Debug extract_issue_links: Found {len(sections)} level2 sections matching {header_pattern[:30]}...", file=sys.stderr)
+            for section in sections[:1]:  # Show first section preview
+                preview = section[:200].replace('\n', ' ')
+                print(f"  Section preview: {preview}...", file=sys.stderr)
+        
         for section in sections:
             # Extract all #N references from the section (including subsections)
             all_refs = re.findall(r'#(\d+)', section)
