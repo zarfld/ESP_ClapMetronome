@@ -259,7 +259,7 @@ void test_ChannelSelection_OutOfRange() {
  */
 void test_MIDIOutputDisabled_NoTrigger() {
     // Arrange
-    test_fixture.output_->enableOutput(OutputMode::DISABLED);
+    test_fixture.output_->enableOutput(OutputMode::DISABLED_MODE);
     
     // Act
     bool triggered = test_fixture.output_->triggerMIDI();

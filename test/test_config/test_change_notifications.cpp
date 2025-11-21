@@ -198,7 +198,7 @@ TEST_F(ConfigChangeNotificationsTest, OutputConfig_CallbackFiredOnChange) {
     EXPECT_TRUE(config_->setOutputConfig(output));
     
     EXPECT_EQ(getCallbackCount(), 1);
-    EXPECT_EQ(getLastCallbackSection(), ConfigChangeEvent::Section::OUTPUT);
+    EXPECT_EQ(getLastCallbackSection(), ConfigChangeEvent::Section::OUTPUT_CFG);
 }
 
 TEST_F(ConfigChangeNotificationsTest, OutputConfig_NoCallbackOnValidationFailure) {
@@ -262,7 +262,7 @@ TEST_F(ConfigChangeNotificationsTest, MixedChanges_CorrectSectionsReported) {
     OutputConfig output = config_->getOutputConfig();
     output.midi_channel = 5;
     EXPECT_TRUE(config_->setOutputConfig(output));
-    EXPECT_EQ(getLastCallbackSection(), ConfigChangeEvent::Section::OUTPUT);
+    EXPECT_EQ(getLastCallbackSection(), ConfigChangeEvent::Section::OUTPUT_CFG);
     
     // Change network
     NetworkConfig network = config_->getNetworkConfig();
@@ -276,7 +276,7 @@ TEST_F(ConfigChangeNotificationsTest, MixedChanges_CorrectSectionsReported) {
     // Verify sections in order
     EXPECT_EQ(callback_records_[0].section, ConfigChangeEvent::Section::AUDIO);
     EXPECT_EQ(callback_records_[1].section, ConfigChangeEvent::Section::BPM);
-    EXPECT_EQ(callback_records_[2].section, ConfigChangeEvent::Section::OUTPUT);
+    EXPECT_EQ(callback_records_[2].section, ConfigChangeEvent::Section::OUTPUT_CFG);
     EXPECT_EQ(callback_records_[3].section, ConfigChangeEvent::Section::NETWORK);
 }
 

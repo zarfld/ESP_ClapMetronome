@@ -162,12 +162,14 @@ void WebServer::setupRoutes() {
 #ifndef NATIVE_BUILD
     if (!async_server_) return;
     
-    // AC-WEB-001: Serve static files from LittleFS
-    async_server_->serveStatic("/", LittleFS, "/").setDefaultFile("index.html");
+    // IMPORTANT: Register API routes BEFORE static file serving
+    // This ensures /api/* paths are handled by REST handlers, not file system
     
     // AC-WEB-002: GET /api/config - Return configuration as JSON
     async_server_->on("/api/config", HTTP_GET, [this](AsyncWebServerRequest* request) {
+        Serial.println("[WebServer] GET /api/config received");
         if (!config_manager_) {
+            Serial.println("[WebServer] ERROR: Config manager is null");
             request->send(500, "application/json", "{\"error\":\"Config manager not available\"}");
             return;
         }
@@ -207,6 +209,7 @@ void WebServer::setupRoutes() {
         
         String response;
         serializeJson(doc, response);
+        Serial.println("[WebServer] Sending config response, length: " + String(response.length()));
         request->send(200, "application/json", response);
         stats_.http_requests++;
     });
@@ -262,6 +265,9 @@ void WebServer::setupRoutes() {
                 config_manager_->setOutputConfig(output);
             }
             
+            // Save to NVS to persist changes
+            config_manager_->saveConfig();
+            
             request->send(200, "application/json", "{\"success\":true}");
             stats_.http_requests++;
         }
@@ -281,6 +287,48 @@ void WebServer::setupRoutes() {
         // Optional: Reboot after a delay
         // delay(1000);
         // ESP.restart();
+    });
+    
+    // AC-WEB-001: Serve static files from LittleFS (LAST - only after API handlers)
+    // Handle root path explicitly
+    async_server_->on("/", HTTP_GET, [](AsyncWebServerRequest* request) {
+        // ESPAsyncWebServer sets Content-Type automatically when using String
+        File file = LittleFS.open("/index.html", "r");
+        if (file) {
+            String content = file.readString();
+            file.close();
+            request->send(200, "text/html", content);
+        } else {
+            request->send(404, "text/plain", "index.html not found");
+        }
+    });
+    
+    // Handle other static files
+    async_server_->onNotFound([](AsyncWebServerRequest* request) {
+        String uri = request->url();
+        
+        // API endpoints should already be handled - send 404 for unknown API paths
+        if (uri.startsWith("/api/")) {
+            request->send(404, "application/json", "{\"error\":\"API endpoint not found\"}");
+            return;
+        }
+        
+        // Try to serve as static file from LittleFS
+        if (LittleFS.exists(uri)) {
+            // Determine content type based on extension
+            String content_type = "text/plain";
+            if (uri.endsWith(".html")) content_type = "text/html";
+            else if (uri.endsWith(".css")) content_type = "text/css";
+            else if (uri.endsWith(".js")) content_type = "application/javascript";
+            else if (uri.endsWith(".json")) content_type = "application/json";
+            else if (uri.endsWith(".png")) content_type = "image/png";
+            else if (uri.endsWith(".jpg") || uri.endsWith(".jpeg")) content_type = "image/jpeg";
+            else if (uri.endsWith(".ico")) content_type = "image/x-icon";
+            
+            request->send(LittleFS, uri, content_type);
+        } else {
+            request->send(404, "text/plain", "File Not Found: " + uri);
+        }
     });
 #endif
 }

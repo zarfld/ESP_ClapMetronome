@@ -59,12 +59,12 @@ enum class MIDIClockMessage : uint8_t {
 };
 
 /**
- * @brief Output Mode Enumeration
+ * @brief Output Mode Configuration (AC-OUT-001)
  * 
  * Defines which output types are active.
  */
 enum class OutputMode : uint8_t {
-    DISABLED = 0,      ///< No outputs
+    DISABLED_MODE = 0, ///< No outputs (renamed to avoid Arduino DISABLED macro)
     MIDI_ONLY = 1,     ///< MIDI output only
     RELAY_ONLY = 2,    ///< Relay output only
     BOTH = 3           ///< Both MIDI and Relay

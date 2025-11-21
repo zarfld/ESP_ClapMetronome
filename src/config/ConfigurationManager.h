@@ -129,7 +129,7 @@ struct ConfigChangeEvent {
     enum class Section {
         AUDIO,
         BPM,
-        OUTPUT,
+        OUTPUT_CFG,  // Renamed to avoid Arduino OUTPUT macro conflict
         NETWORK,
         ALL  ///< Factory reset or full reload
     };

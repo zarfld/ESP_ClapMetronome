@@ -21,6 +21,10 @@
 #include <vector>
 #include <string>
 
+#ifndef NATIVE_BUILD
+#include <esp_timer.h>
+#endif
+
 #ifdef NATIVE_BUILD
 // Native build: NVS functions use in-memory storage
 // Global storage (outside namespace to avoid conflicts)
@@ -131,7 +135,7 @@ bool ConfigurationManager::setOutputConfig(const OutputConfig& config) {
     output_config_ = config;
     
     // Notify
-    notifyChange(ConfigChangeEvent::Section::OUTPUT);
+    notifyChange(ConfigChangeEvent::Section::OUTPUT_CFG);
     
     return true;
 }

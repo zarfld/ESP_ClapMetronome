@@ -117,6 +117,7 @@ void onTelemetry(const AudioTelemetry& telemetry) {
 // Arduino Setup
 //==============================================================================
 
+#ifndef UNIT_TEST  // Don't define setup() when running unit tests
 void setup() {
     // Initialize serial
     Serial.begin(115200);
@@ -219,3 +220,4 @@ void loop() {
     ESP.wdtFeed();
     #endif
 }
+#endif  // UNIT_TEST

@@ -88,7 +88,7 @@ void OutputController::init() {
 // ========== DES-I-013: Output Trigger Interface ==========
 
 bool OutputController::sendMIDIClock() {
-    if (config_.mode == OutputMode::DISABLED || 
+    if (config_.mode == OutputMode::DISABLED_MODE || 
         config_.mode == OutputMode::RELAY_ONLY) {
         return false;
     }
@@ -108,7 +108,7 @@ bool OutputController::sendMIDIClock() {
 }
 
 bool OutputController::sendMIDIStart() {
-    if (config_.mode == OutputMode::DISABLED || 
+    if (config_.mode == OutputMode::DISABLED_MODE || 
         config_.mode == OutputMode::RELAY_ONLY) {
         return false;
     }
@@ -132,7 +132,7 @@ bool OutputController::sendMIDIStart() {
 }
 
 bool OutputController::sendMIDIStop() {
-    if (config_.mode == OutputMode::DISABLED || 
+    if (config_.mode == OutputMode::DISABLED_MODE || 
         config_.mode == OutputMode::RELAY_ONLY) {
         return false;
     }
@@ -156,7 +156,7 @@ bool OutputController::sendMIDIStop() {
 
 bool OutputController::pulseRelay() {
     // Check if relay is enabled
-    if (config_.mode == OutputMode::DISABLED || 
+    if (config_.mode == OutputMode::DISABLED_MODE || 
         config_.mode == OutputMode::MIDI_ONLY) {
         return false;
     }
@@ -184,7 +184,7 @@ void OutputController::enableOutput(OutputMode mode) {
 }
 
 bool OutputController::isEnabled() const {
-    return config_.mode != OutputMode::DISABLED;
+    return config_.mode != OutputMode::DISABLED_MODE;
 }
 
 // ========== BPM Synchronization ==========
@@ -194,7 +194,7 @@ float OutputController::getBPM() const {
 }
 
 bool OutputController::startSync() {
-    if (config_.mode != OutputMode::DISABLED && 
+    if (config_.mode != OutputMode::DISABLED_MODE && 
         config_.mode != OutputMode::RELAY_ONLY) {
         if (!sendMIDIStart()) {
             return false;
@@ -234,7 +234,7 @@ bool OutputController::stopSync() {
     // Stop timer-based clock sending
     stopTimerClock();
     
-    if (config_.mode != OutputMode::DISABLED && 
+    if (config_.mode != OutputMode::DISABLED_MODE && 
         config_.mode != OutputMode::RELAY_ONLY) {
         if (!sendMIDIStop()) {
             return false;
@@ -374,13 +374,17 @@ bool OutputController::sendUDPPacket(const std::vector<uint8_t>& packet) {
     if (simulate_slow_network_) {
         // Check if we would hit timeout (AC-OUT-008: <10ms)
         if (simulated_delay_us_ > 10000) {
-            // Advance time to timeout point (for testing)
+#ifdef NATIVE_BUILD
+            // Advance time to timeout point (for testing only)
             advance_time_us(10000);
+#endif
             network_stats_.send_failures++;
             return false;
         }
-        // Simulate actual delay (up to timeout limit)
+#ifdef NATIVE_BUILD
+        // Simulate actual delay (up to timeout limit) - test only
         advance_time_us(simulated_delay_us_);
+#endif
     }
     
     // Store last packet for test inspection
