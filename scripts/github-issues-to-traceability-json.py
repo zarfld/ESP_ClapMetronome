@@ -117,18 +117,27 @@ def extract_issue_links(body: str) -> dict:
                 links[link_type].extend(int(ref) for ref in all_refs)
     
     # Generic pattern: find all issue references in traceability sections
-    # Look for ## Traceability or ## Traces To sections and extract all #N references
-    traceability_sections = re.findall(
-        r'##\s+(?:Traceability|Traces\s+To).*?(?=##|$)',
-        body,
-        re.IGNORECASE | re.MULTILINE | re.DOTALL
-    )
+    # Look for various traceability section headers and extract all #N references
+    traceability_section_headers = [
+        r'##\s+(?:Traceability|Traces\s+To)',           # ## Traceability
+        r'##\s+(?:Requirements?\s+Satisfied)',          # ## Requirements Satisfied
+        r'###\s+(?:Functional\s+Requirements?)',        # ### Functional Requirements
+        r'###\s+(?:Non-Functional\s+Requirements?)',    # ### Non-Functional Requirements
+        r'###\s+(?:Stakeholder\s+Needs?)',              # ### Stakeholder Need
+    ]
     
-    for section in traceability_sections:
-        # Extract all #N references from the section
-        all_refs = re.findall(r'#(\d+)', section)
-        # Add to traces_to if not already captured
-        for ref in all_refs:
+    for header_pattern in traceability_section_headers:
+        sections = re.findall(
+            rf'{header_pattern}.*?(?=##|###|$)',
+            body,
+            re.IGNORECASE | re.MULTILINE | re.DOTALL
+        )
+        
+        for section in sections:
+            # Extract all #N references from the section
+            all_refs = re.findall(r'#(\d+)', section)
+            # Add to traces_to if not already captured
+            for ref in all_refs:
             ref_int = int(ref)
             if ref_int not in links['traces_to']:
                 links['traces_to'].append(ref_int)
