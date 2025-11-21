@@ -21,8 +21,10 @@
 #include <vector>
 #include <string>
 
-#ifndef NATIVE_BUILD
+#if defined(ESP32) && !defined(NATIVE_BUILD)
 #include <esp_timer.h>
+#elif defined(ESP8266)
+#include <Arduino.h>  // For micros()
 #endif
 
 #ifdef NATIVE_BUILD
@@ -389,9 +391,12 @@ void ConfigurationManager::notifyChange(ConfigChangeEvent::Section section) {
         auto now = std::chrono::steady_clock::now();
         auto duration = now.time_since_epoch();
         event.timestamp_us = std::chrono::duration_cast<std::chrono::microseconds>(duration).count();
-        #else
+        #elif defined(ESP32)
         // ESP32 build: use esp_timer_get_time()
         event.timestamp_us = esp_timer_get_time();
+        #elif defined(ESP8266)
+        // ESP8266 build: use micros()
+        event.timestamp_us = micros();
         #endif
         
         change_callback_(event);
