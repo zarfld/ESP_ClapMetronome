@@ -315,7 +315,7 @@ def main() -> int:
                 ref_type = issue_types.get(ref_id, 'UNKNOWN')
                 
                 # Track linkage to ADRs
-                if ref_type == 'ADR':
+                if ref_type == 'ADR' or ref_type == 'ARC-C':
                     requirements_with_adr.add(issue_id)
                 # Track linkage to Quality Scenarios
                 elif ref_type == 'QA-SC':
@@ -334,6 +334,10 @@ def main() -> int:
             for ref_num in all_linked_issues:
                 ref_id = f"#{ref_num}"
                 ref_type = issue_types.get(ref_id, 'UNKNOWN')
+                
+                # Debug output for troubleshooting
+                if ref_type == 'UNKNOWN' and ref_id not in issue_types:
+                    print(f"Debug: Issue {ref_id} not found in issue_types map", file=sys.stderr)
                 
                 # If linking to a requirement, count reverse linkage
                 if ref_type in ['REQ-F', 'REQ-NF']:
