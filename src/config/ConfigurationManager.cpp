@@ -32,10 +32,14 @@
 // Global storage (outside namespace to avoid conflicts)
 static std::map<std::string, std::vector<uint8_t>> native_nvs_storage;
 static bool native_nvs_initialized = false;
-#else
+#elif defined(ESP32)
 // ESP32 build: Include actual NVS library
 #include <nvs_flash.h>
 #include <nvs.h>
+#elif defined(ESP8266)
+// ESP8266 build: Use LittleFS for storage
+#include <LittleFS.h>
+static bool littlefs_initialized = false;
 #endif
 
 namespace clap_metronome {
@@ -495,7 +499,7 @@ bool ConfigurationManager::nvsErase() {
     return true;
 }
 
-#else
+#elif defined(ESP32)
 // ESP32 build: Actual NVS implementation
 
 bool ConfigurationManager::nvsInit() {
@@ -521,6 +525,130 @@ bool ConfigurationManager::nvsSave() {
 
 bool ConfigurationManager::nvsErase() {
     // TODO: Implement NVS erase
+    return true;
+}
+
+#elif defined(ESP8266)
+// ESP8266 build: LittleFS implementation
+
+bool ConfigurationManager::nvsInit() {
+    if (!littlefs_initialized) {
+        littlefs_initialized = LittleFS.begin();
+    }
+    return littlefs_initialized;
+}
+
+bool ConfigurationManager::nvsLoad() {
+    if (!littlefs_initialized) {
+        return false;
+    }
+    
+    bool audio_loaded = false;
+    bool bpm_loaded = false;
+    bool output_loaded = false;
+    bool network_loaded = false;
+    
+    // Load audio config
+    if (LittleFS.exists("/config/audio.bin")) {
+        File f = LittleFS.open("/config/audio.bin", "r");
+        if (f && f.size() == sizeof(AudioConfig)) {
+            f.readBytes((char*)&audio_config_, sizeof(AudioConfig));
+            audio_loaded = true;
+        }
+        f.close();
+    }
+    
+    // Load BPM config
+    if (LittleFS.exists("/config/bpm.bin")) {
+        File f = LittleFS.open("/config/bpm.bin", "r");
+        if (f && f.size() == sizeof(BPMConfig)) {
+            f.readBytes((char*)&bpm_config_, sizeof(BPMConfig));
+            bpm_loaded = true;
+        }
+        f.close();
+    }
+    
+    // Load output config
+    if (LittleFS.exists("/config/output.bin")) {
+        File f = LittleFS.open("/config/output.bin", "r");
+        if (f && f.size() == sizeof(OutputConfig)) {
+            f.readBytes((char*)&output_config_, sizeof(OutputConfig));
+            output_loaded = true;
+        }
+        f.close();
+    }
+    
+    // Load network config and decrypt passwords
+    if (LittleFS.exists("/config/network.bin")) {
+        File f = LittleFS.open("/config/network.bin", "r");
+        if (f && f.size() == sizeof(NetworkConfig)) {
+            f.readBytes((char*)&network_config_, sizeof(NetworkConfig));
+            decryptPassword(network_config_.wifi_password, sizeof(network_config_.wifi_password));
+            decryptPassword(network_config_.mqtt_password, sizeof(network_config_.mqtt_password));
+            network_loaded = true;
+        }
+        f.close();
+    }
+    
+    return (audio_loaded || bpm_loaded || output_loaded || network_loaded);
+}
+
+bool ConfigurationManager::nvsSave() {
+    if (!littlefs_initialized) {
+        return false;
+    }
+    
+    // Ensure /config directory exists
+    if (!LittleFS.exists("/config")) {
+        LittleFS.mkdir("/config");
+    }
+    
+    // Save audio config
+    File f = LittleFS.open("/config/audio.bin", "w");
+    if (f) {
+        f.write((uint8_t*)&audio_config_, sizeof(AudioConfig));
+        f.close();
+    }
+    
+    // Save BPM config
+    f = LittleFS.open("/config/bpm.bin", "w");
+    if (f) {
+        f.write((uint8_t*)&bpm_config_, sizeof(BPMConfig));
+        f.close();
+    }
+    
+    // Save output config
+    f = LittleFS.open("/config/output.bin", "w");
+    if (f) {
+        f.write((uint8_t*)&output_config_, sizeof(OutputConfig));
+        f.close();
+    }
+    
+    // Save network config with encrypted passwords
+    NetworkConfig network_encrypted = network_config_;
+    encryptPassword(network_encrypted.wifi_password, sizeof(network_encrypted.wifi_password));
+    encryptPassword(network_encrypted.mqtt_password, sizeof(network_encrypted.mqtt_password));
+    
+    f = LittleFS.open("/config/network.bin", "w");
+    if (f) {
+        f.write((uint8_t*)&network_encrypted, sizeof(NetworkConfig));
+        f.close();
+    }
+    
+    return true;
+}
+
+bool ConfigurationManager::nvsErase() {
+    if (!littlefs_initialized) {
+        return false;
+    }
+    
+    // Remove all config files
+    LittleFS.remove("/config/audio.bin");
+    LittleFS.remove("/config/bpm.bin");
+    LittleFS.remove("/config/output.bin");
+    LittleFS.remove("/config/network.bin");
+    
     return true;
 }
 
