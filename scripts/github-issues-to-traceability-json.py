@@ -32,19 +32,15 @@ ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / 'build' / 'traceability.json'
 
 def extract_issue_links(body: str) -> dict:
-    """Extract traceability links from issue body.
+    """Extract ALL issue references from body text.
     
-    Handles multiple formats:
-    1. Inline bold: **Traces to**: #123
-    2. Bold with markdown: **Parent**: #1 (StR-001: Description)
-    3. Section headers with lists:
-       ## Traceability
-       **Implements Requirements**:
-       - #2 (REQ-F-001: Description)
-    4. Narrative format: **Addresses Requirements**: #2, #6, #7
+    Trusts GitHub's infrastructure: any #N reference is a link.
+    Ignores markdown patterns - they're unreliable across issues.
+    
+    Returns all found references in 'traces_to' for generic linkage.
     """
     if not body:
-        return {}
+        return {'traces_to': []}
     
     links = defaultdict(list)
     
@@ -135,8 +131,10 @@ def extract_issue_links(body: str) -> dict:
         if sections:
             print(f"Debug extract_issue_links: Found {len(sections)} level2 sections matching {header_pattern[:30]}...", file=sys.stderr)
             for section in sections[:1]:  # Show first section preview
-                preview = section[:200].replace('\n', ' ')
-                print(f"  Section preview: {preview}...", file=sys.stderr)
+                preview = section[:500].replace('\n', '\\n')
+                print(f"  Section (500 chars): {preview}", file=sys.stderr)
+                refs_found = re.findall(r'#(\d+)', section)
+                print(f"  Issue refs in section: {refs_found[:20]}", file=sys.stderr)
         
         for section in sections:
             # Extract all #N references from the section (including subsections)
