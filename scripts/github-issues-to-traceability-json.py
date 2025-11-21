@@ -331,13 +331,6 @@ def main() -> int:
         
         links = extract_issue_links(issue.body or "")
         
-        # Debug: Show extraction summary for ADRs and ARC-Cs
-        if req_type in ['ADR', 'ARC-C']:
-            if links.get('traces_to'):
-                print(f"Debug: {issue_id} ({req_type}) extracted {len(links['traces_to'])} links: {links['traces_to'][:10]}", file=sys.stderr)
-            else:
-                print(f"Debug: {issue_id} ({req_type}) extracted NO links (empty traces_to)", file=sys.stderr)
-        
         # Build item entry
         item = {
             'id': issue_id,
@@ -403,26 +396,14 @@ def main() -> int:
                 ref_id = f"#{ref_num}"
                 ref_type = issue_types.get(ref_id, 'UNKNOWN')
                 
-                # Debug output for troubleshooting
-                if ref_type == 'UNKNOWN' and ref_id not in issue_types:
-                    print(f"Debug: Issue {ref_id} not found in issue_types map", file=sys.stderr)
-                
                 # If linking to a requirement, count reverse linkage
                 if ref_type in ['REQ-F', 'REQ-NF']:
                     if req_type in ['ADR', 'ARC-C']:
                         requirements_with_adr.add(ref_id)
-                        print(f"Debug: {issue_id} ({req_type}) → {ref_id} ({ref_type}): Added to ADR linkage", file=sys.stderr)
                     elif req_type == 'QA-SC':
                         requirements_with_scenario.add(ref_id)
-                        print(f"Debug: {issue_id} ({req_type}) → {ref_id} ({ref_type}): Added to scenario linkage", file=sys.stderr)
                     elif req_type == 'TEST':
                         requirements_with_test.add(ref_id)
-                        print(f"Debug: {issue_id} ({req_type}) → {ref_id} ({ref_type}): Added to test linkage", file=sys.stderr)
-    
-    # Debug: Print summary
-    print(f"\nDebug: Requirements with ADR linkage: {sorted(requirements_with_adr)}", file=sys.stderr)
-    print(f"Debug: Total requirements: {len(requirements)}", file=sys.stderr)
-    print(f"Debug: ADR coverage: {len(requirements_with_adr)}/{len(requirements)} = {len(requirements_with_adr)/len(requirements)*100:.1f}%\n", file=sys.stderr)
     
     # Calculate metrics
     total_reqs = len(requirements)
