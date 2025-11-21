@@ -326,6 +326,16 @@ target_link_libraries(test_config_encryption gtest gtest_main)
 target_compile_definitions(test_config_encryption PRIVATE NATIVE_BUILD UNIT_TEST)
 gtest_discover_tests(test_config_encryption)
 
+# Test 6: Config Migration (AC-CFG-007)
+add_executable(test_config_migration
+    test_config/test_migration.cpp
+    ${CONFIG_SOURCES}
+)
+target_include_directories(test_config_migration PRIVATE ${COMMON_INCLUDES})
+target_link_libraries(test_config_migration gtest gtest_main)
+target_compile_definitions(test_config_migration PRIVATE NATIVE_BUILD UNIT_TEST)
+gtest_discover_tests(test_config_migration)
+
 # ============================================================================
 # CUSTOM TARGETS FOR CONVENIENT EXECUTION
 # ============================================================================
