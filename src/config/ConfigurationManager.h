@@ -32,6 +32,7 @@
 #include <cstdint>
 #include <functional>
 #include <string>
+#include <vector>
 
 namespace clap_metronome {
 
@@ -327,6 +328,15 @@ public:
      * Clears all stored configuration data for test isolation.
      */
     static void resetNVSForTesting();
+    
+    /**
+     * Get raw NVS data (test-only helper)
+     * Returns encrypted data as stored in NVS for verification.
+     * 
+     * @param key Storage key ("audio", "bpm", "output", "network")
+     * @return Raw bytes from NVS storage
+     */
+    std::vector<uint8_t> getNVSRawData(const std::string& key) const;
 #endif
     
 private:
@@ -335,6 +345,10 @@ private:
     BPMConfig bpm_config_;
     OutputConfig output_config_;
     NetworkConfig network_config_;
+    
+    // Encryption helpers (REQ-NF-003: Security)
+    void encryptPassword(char* password, size_t max_len);
+    void decryptPassword(char* password, size_t max_len);
     
     // Change notification callback
     std::function<void(const ConfigChangeEvent&)> change_callback_;

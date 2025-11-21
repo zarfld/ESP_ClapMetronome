@@ -197,11 +197,42 @@ void ConfigurationManager::resetNVSForTesting() {
     native_nvs_initialized = false;
 #endif
 }
+
+std::vector<uint8_t> ConfigurationManager::getNVSRawData(const std::string& key) const {
+#ifdef NATIVE_BUILD
+    auto it = native_nvs_storage.find(key);
+    if (it != native_nvs_storage.end()) {
+        return it->second;
+    }
+#endif
+    return std::vector<uint8_t>();  // Empty if not found
+}
 #endif
 
 // ============================================================================
 // Internal Helpers
 // ============================================================================
+
+void ConfigurationManager::encryptPassword(char* password, size_t max_len) {
+    // Simple XOR encryption for native builds (demonstration)
+    // For ESP32, use NVS encryption feature (hardware-backed)
+    #ifdef NATIVE_BUILD
+    const uint8_t key = 0xA5;  // XOR key (in production, use proper key derivation)
+    size_t len = std::strlen(password);
+    for (size_t i = 0; i < len && i < max_len; ++i) {
+        password[i] ^= key;
+    }
+    #endif
+    // ESP32: NVS handles encryption automatically when nvs_flash_init_partition is called with encryption
+}
+
+void ConfigurationManager::decryptPassword(char* password, size_t max_len) {
+    // XOR is symmetric, so decrypt is same as encrypt
+    #ifdef NATIVE_BUILD
+    encryptPassword(password, max_len);  // XOR again to decrypt
+    #endif
+    // ESP32: NVS handles decryption automatically
+}
 
 void ConfigurationManager::loadDefaults() {
     // Audio defaults
@@ -407,10 +438,12 @@ bool ConfigurationManager::nvsLoad() {
         output_loaded = true;
     }
     
-    // Load network config
+    // Load network config and decrypt passwords
     it = native_nvs_storage.find("network");
     if (it != native_nvs_storage.end() && it->second.size() == sizeof(NetworkConfig)) {
         std::memcpy(&network_config_, it->second.data(), sizeof(NetworkConfig));
+        decryptPassword(network_config_.wifi_password, sizeof(network_config_.wifi_password));
+        decryptPassword(network_config_.mqtt_password, sizeof(network_config_.mqtt_password));
         network_loaded = true;
     }
     
@@ -436,8 +469,13 @@ bool ConfigurationManager::nvsSave() {
     std::memcpy(output_data.data(), &output_config_, sizeof(OutputConfig));
     native_nvs_storage["output"] = output_data;
     
+    // Save network config with encrypted passwords
+    NetworkConfig network_encrypted = network_config_;  // Copy
+    encryptPassword(network_encrypted.wifi_password, sizeof(network_encrypted.wifi_password));
+    encryptPassword(network_encrypted.mqtt_password, sizeof(network_encrypted.mqtt_password));
+    
     std::vector<uint8_t> network_data(sizeof(NetworkConfig));
-    std::memcpy(network_data.data(), &network_config_, sizeof(NetworkConfig));
+    std::memcpy(network_data.data(), &network_encrypted, sizeof(NetworkConfig));
     native_nvs_storage["network"] = network_data;
     
     return true;

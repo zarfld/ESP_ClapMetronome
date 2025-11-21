@@ -316,6 +316,16 @@ target_link_libraries(test_config_persistence gtest gtest_main)
 target_compile_definitions(test_config_persistence PRIVATE NATIVE_BUILD UNIT_TEST)
 gtest_discover_tests(test_config_persistence)
 
+# Test 5: Credential Encryption (AC-CFG-006)
+add_executable(test_config_encryption
+    test_config/test_encryption.cpp
+    ${CONFIG_SOURCES}
+)
+target_include_directories(test_config_encryption PRIVATE ${COMMON_INCLUDES})
+target_link_libraries(test_config_encryption gtest gtest_main)
+target_compile_definitions(test_config_encryption PRIVATE NATIVE_BUILD UNIT_TEST)
+gtest_discover_tests(test_config_encryption)
+
 # ============================================================================
 # CUSTOM TARGETS FOR CONVENIENT EXECUTION
 # ============================================================================
