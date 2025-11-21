@@ -10,9 +10,9 @@
 #include "OutputController.h"
 #include <cmath>  // For sqrtf
 
-#ifdef NATIVE_BUILD
-#include "test/mocks/time_mock.h"
-#else
+#ifdef UNIT_TEST
+#include "../test/mocks/time_mock.h"
+#elif !defined(NATIVE_BUILD)
 #include <Arduino.h>
 #endif
 

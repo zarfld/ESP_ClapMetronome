@@ -45,6 +45,7 @@ void BPMOutputBridge::onBPMUpdate(const BPMUpdateEvent& event) {
 }
 
 void BPMOutputBridge::onBeatDetected(uint64_t timestamp_us) {
+    (void)timestamp_us;  // Parameter reserved for future use
     // Trigger relay pulse if relay enabled
     OutputConfig config = output_controller_->getConfig();
     if (config.mode == OutputMode::RELAY_ONLY || config.mode == OutputMode::BOTH) {

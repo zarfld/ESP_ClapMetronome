@@ -166,6 +166,7 @@ bool MQTTClient::publishBPM(float bpm, uint8_t confidence, const char* lock_stat
     
 #ifdef NATIVE_BUILD
     // Native build - mock publish for unit tests
+    (void)bpm; (void)confidence; (void)lock_status; (void)timestamp;
     return true;
 #else
     // Build topic
@@ -200,6 +201,7 @@ bool MQTTClient::publishAudioLevels(uint16_t current_level, uint16_t max_level, 
     }
     
 #ifdef NATIVE_BUILD
+    (void)current_level; (void)max_level; (void)min_level; (void)threshold; (void)gain;
     return true;
 #else
     std::string topic = std::string(config_->device_id) + "/telemetry/audio";
@@ -226,6 +228,7 @@ bool MQTTClient::publishSystemStatus(uint32_t uptime_sec, uint32_t free_heap,
     }
     
 #ifdef NATIVE_BUILD
+    (void)uptime_sec; (void)free_heap; (void)wifi_rssi; (void)wifi_ssid;
     return true;
 #else
     std::string topic = std::string(config_->device_id) + "/status/system";
@@ -266,6 +269,7 @@ void MQTTClient::setLastWill() {
 
 bool MQTTClient::publishOnlineStatus(bool online) {
 #ifdef NATIVE_BUILD
+    (void)online;
     return true;
 #else
     std::string topic = std::string(config_->device_id) + "/status/online";

@@ -211,7 +211,7 @@ TEST_F(AdaptiveThresholdTest, ThresholdWindow_RealTimeUpdate) {
     uint64_t duration = timing_->getTimestampUs();
     
     // Should complete in reasonable time (125µs × 100 = 12.5ms)
-    EXPECT_LT(duration, 100000); // 100ms in microseconds
+    EXPECT_LT(duration, 100000ULL); // 100ms in microseconds
 }
 
 // ============================================================================
