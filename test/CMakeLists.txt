@@ -377,6 +377,23 @@ target_compile_definitions(test_rtc_integration PRIVATE NATIVE_BUILD UNIT_TEST)
 gtest_discover_tests(test_rtc_integration)
 
 # ============================================================================
+# WEB SERVER TESTS (Wave 3.6 - DES-C-003)
+# ============================================================================
+
+# Test 1: Web Server Logic Unit Tests (AC-WEB-007, AC-WEB-008) - Native with Mocks
+add_executable(test_web_logic
+    test_web/test_web_logic.cpp
+)
+target_include_directories(test_web_logic PRIVATE ${COMMON_INCLUDES})
+target_link_libraries(test_web_logic gtest gtest_main)
+target_compile_definitions(test_web_logic PRIVATE NATIVE_BUILD UNIT_TEST)
+gtest_discover_tests(test_web_logic)
+
+# Note: Integration tests (AC-WEB-001 to AC-WEB-006, AC-WEB-009, AC-WEB-010)
+# require ESP32 hardware and are located in test/esp32/test_web_integration.cpp
+# Run with: pio test -e esp32dev
+
+# ============================================================================
 # CUSTOM TARGETS FOR CONVENIENT EXECUTION
 # ============================================================================
 
