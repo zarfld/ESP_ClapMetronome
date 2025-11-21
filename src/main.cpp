@@ -51,36 +51,165 @@ AudioDetection audio_detection(&timing_manager);
 // Configuration
 //==============================================================================
 
-// Audio input pin
+// Hardware Pin Assignments (Wave 3.8 - Final Configuration)
 #if defined(ESP32)
-  const int AUDIO_INPUT_PIN = 36;  // GPIO36 (ADC1_CH0)
+  // DS3231 RTC (I2C)
+  const int SDA_PIN = 21;          // GPIO21 - I2C Data
+  const int SCL_PIN = 22;          // GPIO22 - I2C Clock
+  
+  // MAX9814 Microphone
+  const int AUDIO_INPUT_PIN = 36;  // GPIO36 (ADC1_CH0) - Audio Signal
+  const int GAIN_PIN = 32;         // GPIO32 - Gain Control (40/50/60dB)
+  const int AR_PIN = 33;           // GPIO33 - Attack/Release (1:2000/1:4000)
+  
+  // Application Pins
   const int LED_PIN = 2;           // Built-in LED
+  
 #elif defined(ESP8266)
   const int AUDIO_INPUT_PIN = A0;  // Analog pin
   const int LED_PIN = 2;           // Built-in LED
 #endif
+
+// MAX9814 Gain Levels
+enum class GainLevel : uint8_t {
+    GAIN_40DB = 0,  // LOW  - Loud environments (concerts, rehearsals)
+    GAIN_50DB = 1,  // FLOAT - Moderate environments (normal conversation)
+    GAIN_60DB = 2   // HIGH - Quiet rooms (risk of saturation with loud input)
+};
+
+GainLevel current_gain = GainLevel::GAIN_40DB;  // Default: 40dB (recommended)
 
 // Sample rate: 16kHz (62.5μs per sample)
 const uint32_t SAMPLE_INTERVAL_US = 62;
 uint64_t last_sample_time_us = 0;
 
 //==============================================================================
-// Beat Event Handler
+// MAX9814 Gain Control
+//==============================================================================
+
+/**
+ * Set MAX9814 gain level via GPIO32
+ * 
+ * Hardware Control:
+ * - 40dB: GPIO32 LOW
+ * - 50dB: GPIO32 FLOAT (INPUT mode)
+ * - 60dB: GPIO32 HIGH
+ * 
+ * Implements: Wave 3.8 MAX9814 Integration
+ */
+void setMAX9814Gain(GainLevel level) {
+    #if defined(ESP32)
+    switch (level) {
+        case GainLevel::GAIN_40DB:
+            pinMode(GAIN_PIN, OUTPUT);
+            digitalWrite(GAIN_PIN, LOW);
+            Serial.println("MAX9814 Gain: 40dB (LOW)");
+            break;
+        case GainLevel::GAIN_50DB:
+            pinMode(GAIN_PIN, INPUT);  // Float
+            Serial.println("MAX9814 Gain: 50dB (FLOAT)");
+            break;
+        case GainLevel::GAIN_60DB:
+            pinMode(GAIN_PIN, OUTPUT);
+            digitalWrite(GAIN_PIN, HIGH);
+            Serial.println("MAX9814 Gain: 60dB (HIGH)");
+            break;
+    }
+    current_gain = level;
+    #endif
+}
+
+/**
+ * Set MAX9814 attack/release time via GPIO33
+ * 
+ * Hardware Control:
+ * - Fast (1:2000): GPIO33 LOW  - Recommended for beat detection
+ * - Slow (1:4000): GPIO33 HIGH - For sustained signals
+ * 
+ * Implements: Wave 3.8 MAX9814 Integration
+ */
+void setMAX9814AttackRelease(bool fast) {
+    #if defined(ESP32)
+    pinMode(AR_PIN, OUTPUT);
+    digitalWrite(AR_PIN, fast ? LOW : HIGH);
+    Serial.print("MAX9814 Attack/Release: ");
+    Serial.println(fast ? "Fast (1:2000)" : "Slow (1:4000)");
+    #endif
+}
+
+/**
+ * Auto-adjust MAX9814 gain based on signal levels
+ * 
+ * Algorithm:
+ * - If peak > 3800: Reduce to 40dB (avoid saturation)
+ * - If avg < 500: Increase to 60dB (boost weak signal)
+ * - If 1000-3000: Maintain current gain (optimal range)
+ * 
+ * Implements: Test 009 Auto-Gain Algorithm
+ */
+void autoAdjustGain(uint16_t peak_value, uint16_t avg_value) {
+    #if defined(ESP32)
+    static uint32_t last_adjustment = 0;
+    const uint32_t ADJUSTMENT_INTERVAL_MS = 5000;  // Don't adjust too frequently
+    
+    if (millis() - last_adjustment < ADJUSTMENT_INTERVAL_MS) {
+        return;  // Too soon to adjust again
+    }
+    
+    GainLevel new_gain = current_gain;
+    
+    if (peak_value > 3800) {
+        // Signal too loud, reduce gain to prevent saturation
+        if (current_gain != GainLevel::GAIN_40DB) {
+            new_gain = GainLevel::GAIN_40DB;
+            Serial.println("Auto-gain: Reducing to 40dB (high signal detected)");
+        }
+    } else if (avg_value < 500) {
+        // Signal too weak, increase gain
+        if (current_gain != GainLevel::GAIN_60DB) {
+            new_gain = (current_gain == GainLevel::GAIN_40DB) ? 
+                       GainLevel::GAIN_50DB : GainLevel::GAIN_60DB;
+            Serial.println("Auto-gain: Increasing gain (weak signal detected)");
+        }
+    }
+    
+    if (new_gain != current_gain) {
+        setMAX9814Gain(new_gain);
+        last_adjustment = millis();
+    }
+    #endif
+}
+
 //==============================================================================
 
 /**
  * Callback invoked when a beat is detected
  * 
  * Implements: AC-AUDIO-004 Beat Event Emission
+ * Wave 3.8: Includes RTC timestamp
  */
 void onBeatDetected(const BeatEvent& event) {
     // Flash LED on beat
     digitalWrite(LED_PIN, LOW);
     
-    // Log beat to serial
-    Serial.print("Beat detected! timestamp=");
-    Serial.print((uint32_t)(event.timestamp_us / 1000));
-    Serial.print("ms, amplitude=");
+    // Get RTC timestamp if available
+    if (timing_manager.rtcHealthy()) {
+        // RTC timestamp available - convert to human-readable
+        uint64_t timestamp_us = timing_manager.getTimestampUs();
+        uint32_t timestamp_ms = timestamp_us / 1000;
+        
+        Serial.print("[RTC] Beat detected @ ");
+        Serial.print(timestamp_ms);
+        Serial.print("ms");
+    } else {
+        // Fallback to micros() timestamp
+        Serial.print("Beat detected! timestamp=");
+        Serial.print((uint32_t)(event.timestamp_us / 1000));
+        Serial.print("ms");
+    }
+    
+    // Log beat details
+    Serial.print(", amplitude=");
     Serial.print(event.amplitude);
     Serial.print(", threshold=");
     Serial.print(event.threshold);
@@ -100,6 +229,7 @@ void onBeatDetected(const BeatEvent& event) {
  * Callback invoked every 500ms for telemetry
  * 
  * Implements: AC-AUDIO-007 Telemetry Updates
+ * Wave 3.8: Enables auto-gain adjustment
  */
 void onTelemetry(const AudioTelemetry& telemetry) {
     Serial.print("Telemetry: ");
@@ -110,7 +240,12 @@ void onTelemetry(const AudioTelemetry& telemetry) {
     Serial.print(", beats=");
     Serial.print(telemetry.beat_count);
     Serial.print(", FP=");
-    Serial.println(telemetry.false_positive_count);
+    Serial.print(telemetry.false_positive_count);
+    Serial.print(", gain=");
+    Serial.println(telemetry.gain_level);
+    
+    // Auto-adjust MAX9814 gain based on signal levels
+    autoAdjustGain(telemetry.max_value, telemetry.adc_value);
 }
 
 //==============================================================================
@@ -127,6 +262,7 @@ void setup() {
     Serial.println("\n\n=== ESP_ClapMetronome Starting ===");
     Serial.println("Phase 05: TDD Implementation");
     Serial.println("Wave 1: Audio Detection (Cycles 1-14) COMPLETE");
+    Serial.println("Wave 3.8: Hardware Integration (DS3231 + MAX9814) INTEGRATED");
     
     // Configure watchdog
     #if defined(ESP32)
@@ -145,6 +281,22 @@ void setup() {
     pinMode(AUDIO_INPUT_PIN, INPUT);
     Serial.print("Audio input configured on pin ");
     Serial.println(AUDIO_INPUT_PIN);
+    
+    // Initialize I2C for DS3231 RTC (Wave 3.8)
+    #if defined(ESP32)
+    Wire.begin(SDA_PIN, SCL_PIN);  // GPIO21=SDA, GPIO22=SCL
+    Serial.print("I2C initialized: SDA=");
+    Serial.print(SDA_PIN);
+    Serial.print(", SCL=");
+    Serial.println(SCL_PIN);
+    #endif
+    
+    // Initialize MAX9814 hardware control (Wave 3.8)
+    #if defined(ESP32)
+    setMAX9814Gain(GainLevel::GAIN_40DB);  // Default: 40dB (recommended)
+    setMAX9814AttackRelease(true);          // Fast attack (1:2000)
+    Serial.println("MAX9814 hardware control initialized");
+    #endif
     
     // Initialize timing manager
     Serial.println("Initializing timing manager...");
