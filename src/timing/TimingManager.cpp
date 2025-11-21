@@ -33,6 +33,10 @@
     // ESP32/ESP8266 environment
     #include <Arduino.h>
     #include <Wire.h>
+    #include <RTClib.h>  // DS3231 RTC support
+    
+    // Static RTC instance (shared across all TimingManager instances)
+    static RTC_DS3231 rtc;
 #endif
 
 //==============================================================================
@@ -122,9 +126,10 @@ bool TimingManager::rtcHealthy() {
 float TimingManager::getRtcTemperature() {
     #ifndef NATIVE_BUILD
     if (state_.rtc_available && state_.rtc_healthy) {
-        // TODO: Implement RTC temperature reading via I2C
-        // For now, return cached value
-        return state_.rtc_temperature;
+        // Read temperature from DS3231 RTC
+        float temp = rtc.getTemperature();
+        state_.rtc_temperature = temp;
+        return temp;
     }
     #endif
     return 0.0f;
@@ -153,8 +158,8 @@ bool TimingManager::syncRtc() {
 
 bool TimingManager::detectRTC() {
     #ifndef NATIVE_BUILD
+    // Note: Wire.begin() should be called before this (in main.cpp setup)
     // Try to communicate with RTC3231 at I2C address
-    Wire.begin();
     Wire.beginTransmission(RTC_I2C_ADDRESS);
     uint8_t error = Wire.endTransmission();
     
@@ -166,11 +171,18 @@ bool TimingManager::detectRTC() {
 
 bool TimingManager::initRTC() {
     #ifndef NATIVE_BUILD
-    // TODO: Initialize RTC3231 registers
-    // - Set 1Hz square wave output
-    // - Enable oscillator
-    // - Clear status flags
-    return true;  // For now, assume success after detection
+    // Initialize RTC using RTClib
+    if (!rtc.begin()) {
+        return false;  // RTC initialization failed
+    }
+    
+    // Check if RTC lost power and needs time reset
+    if (rtc.lostPower()) {
+        // Set to compile time as default (will be synced via NTP later)
+        rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+    }
+    
+    return true;
     #else
     return false;
     #endif
@@ -178,9 +190,29 @@ bool TimingManager::initRTC() {
 
 uint64_t TimingManager::readRTCTimestampUs() {
     #ifndef NATIVE_BUILD
-    // TODO: Implement RTC3231 I2C read
-    // For now, fall back to micros()
-    return micros();
+    // Read current time from RTC
+    DateTime now = rtc.now();
+    
+    // Convert to Unix timestamp (seconds since 1970-01-01)
+    uint32_t unix_seconds = now.unixtime();
+    
+    // Convert to microseconds
+    // Note: RTC only provides second resolution, so we'll add micros() offset
+    // to get sub-second precision within the current second
+    static uint32_t last_rtc_second = 0;
+    static uint64_t rtc_base_us = 0;
+    static uint64_t micros_offset = 0;
+    
+    // If RTC second changed, update base timestamp
+    if (unix_seconds != last_rtc_second) {
+        last_rtc_second = unix_seconds;
+        rtc_base_us = (uint64_t)unix_seconds * 1000000ULL;
+        micros_offset = micros();
+    }
+    
+    // Return RTC seconds + micros() sub-second offset
+    uint64_t micros_elapsed = micros() - micros_offset;
+    return rtc_base_us + micros_elapsed;
     #else
     return 0;
     #endif
