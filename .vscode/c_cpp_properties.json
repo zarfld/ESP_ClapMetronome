@@ -9,8 +9,8 @@
             "name": "PlatformIO",
             "includePath": [
                 "D:/Repos/ESP_ClapMetronome/src",
-                "C:/Users/zarfld/.platformio/packages/framework-arduinoespressif32/libraries/LittleFS/src",
                 "C:/Users/zarfld/.platformio/packages/framework-arduinoespressif32/libraries/WebServer/src",
+                "C:/Users/zarfld/.platformio/packages/framework-arduinoespressif32/libraries/LittleFS/src",
                 "D:/Repos/ESP_ClapMetronome/.pio/libdeps/esp32dev/WebSockets/src",
                 "C:/Users/zarfld/.platformio/packages/framework-arduinoespressif32/libraries/WiFiClientSecure/src",
                 "C:/Users/zarfld/.platformio/packages/framework-arduinoespressif32/libraries/Ethernet/src",
@@ -253,8 +253,8 @@
                 "limitSymbolsToIncludedHeaders": true,
                 "path": [
                     "D:/Repos/ESP_ClapMetronome/src",
-                    "C:/Users/zarfld/.platformio/packages/framework-arduinoespressif32/libraries/LittleFS/src",
                     "C:/Users/zarfld/.platformio/packages/framework-arduinoespressif32/libraries/WebServer/src",
+                    "C:/Users/zarfld/.platformio/packages/framework-arduinoespressif32/libraries/LittleFS/src",
                     "D:/Repos/ESP_ClapMetronome/.pio/libdeps/esp32dev/WebSockets/src",
                     "C:/Users/zarfld/.platformio/packages/framework-arduinoespressif32/libraries/WiFiClientSecure/src",
                     "C:/Users/zarfld/.platformio/packages/framework-arduinoespressif32/libraries/Ethernet/src",
