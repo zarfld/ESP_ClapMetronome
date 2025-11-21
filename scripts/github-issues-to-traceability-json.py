@@ -318,6 +318,10 @@ def main() -> int:
         
         links = extract_issue_links(issue.body or "")
         
+        # Debug: Show extraction summary for ADRs and ARC-Cs
+        if req_type in ['ADR', 'ARC-C'] and links.get('traces_to'):
+            print(f"Debug: {issue_id} ({req_type}) extracted {len(links['traces_to'])} links: {links['traces_to'][:10]}", file=sys.stderr)
+        
         # Build item entry
         item = {
             'id': issue_id,
