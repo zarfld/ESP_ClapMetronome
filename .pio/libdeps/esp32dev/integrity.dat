@@ -1,3 +1,7 @@
-256dpi/MQTT @ ^2.5.2
 adafruit/RTClib @ ^2.1.4
+256dpi/MQTT @ ^2.5.2
 adafruit/Adafruit MCP23017 Arduino Library @ ^2.3.2
+esphome/ESPAsyncWebServer-esphome @ ^3.1.0
+esphome/AsyncTCP-esphome @ ^2.1.1
+makuna/WebSockets @ ^2.4.1
+bblanchon/ArduinoJson @ ^6.21.5
