@@ -347,6 +347,26 @@ target_compile_definitions(test_config_performance PRIVATE NATIVE_BUILD UNIT_TES
 gtest_discover_tests(test_config_performance)
 
 # ============================================================================
+# TIMING MANAGER TESTS (Wave 3.5 - DES-C-005)
+# ============================================================================
+
+# Timing Manager sources
+set(TIMING_SOURCES
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/timing/TimingManager.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/timing/TimingManager.h
+)
+
+# Test 1: Timing Manager Foundation (AC-TIME-001 through AC-TIME-008)
+add_executable(test_timing_manager
+    test_timing/test_timing_manager.cpp
+    ${TIMING_SOURCES}
+)
+target_include_directories(test_timing_manager PRIVATE ${COMMON_INCLUDES})
+target_link_libraries(test_timing_manager gtest gtest_main)
+target_compile_definitions(test_timing_manager PRIVATE NATIVE_BUILD UNIT_TEST)
+gtest_discover_tests(test_timing_manager)
+
+# ============================================================================
 # CUSTOM TARGETS FOR CONVENIENT EXECUTION
 # ============================================================================
 
