@@ -268,6 +268,25 @@ target_compile_definitions(test_bpm_callback_notifications PRIVATE NATIVE_BUILD 
 gtest_discover_tests(test_bpm_callback_notifications)
 
 # ============================================================================
+# CONFIGURATION MANAGER TEST SUITES (Wave 3.4)
+# ============================================================================
+
+# Config sources
+set(CONFIG_SOURCES
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/config/ConfigurationManager.cpp
+)
+
+# Test 1: Factory Default Values (AC-CFG-002)
+add_executable(test_config_default_values
+    test_config/test_default_values.cpp
+    ${CONFIG_SOURCES}
+)
+target_include_directories(test_config_default_values PRIVATE ${COMMON_INCLUDES})
+target_link_libraries(test_config_default_values gtest gtest_main)
+target_compile_definitions(test_config_default_values PRIVATE NATIVE_BUILD UNIT_TEST)
+gtest_discover_tests(test_config_default_values)
+
+# ============================================================================
 # CUSTOM TARGETS FOR CONVENIENT EXECUTION
 # ============================================================================
 
