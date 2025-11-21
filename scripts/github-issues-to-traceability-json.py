@@ -78,11 +78,21 @@ def extract_issue_links(body: str) -> dict:
         'implemented_by': r'\*\*(?:Implemented\s+by|Implements?)(?:\s+Requirements?)?\*\*:[^#]*?(?:^|\n)\s*-?\s*#(\d+)',
     }
     
-    # Additional patterns for architecture issues
-    architecture_patterns = {
-        'traces_to': r'\*\*(?:Addresses|Satisfies)\s+Requirements?\*\*:[^#]*?#(\d+)',  # ADR pattern
-        'implemented_by': r'\*\*(?:Components?\s+Affected|Architecture\s+Decisions?)\*\*:[^#]*?#(\d+)',
-        'verified_by': r'\*\*(?:Quality\s+Scenarios?|Requirements?\s+Verified)\*\*:[^#]*?#(\d+)',
+    # Additional patterns for architecture issues - find sections then extract all #N
+    architecture_section_labels = {
+        'traces_to': [
+            'Addresses Requirements?',
+            'Satisfies Requirements?',
+            'Requirements? Satisfied',
+        ],
+        'implemented_by': [
+            'Components? Affected',
+            'Architecture Decisions?',
+        ],
+        'verified_by': [
+            'Quality Scenarios?',
+            'Requirements? Verified',
+        ],
     }
     
     # Extract all patterns
@@ -95,9 +105,16 @@ def extract_issue_links(body: str) -> dict:
         matches = re.findall(pattern, body, re.IGNORECASE | re.MULTILINE | re.DOTALL)
         links[link_type].extend(int(m) for m in matches)
     
-    for link_type, pattern in architecture_patterns.items():
-        matches = re.findall(pattern, body, re.IGNORECASE | re.MULTILINE | re.DOTALL)
-        links[link_type].extend(int(m) for m in matches)
+    # For architecture patterns, find the labeled section and extract ALL #N references
+    for link_type, label_list in architecture_section_labels.items():
+        for label in label_list:
+            # Find sections with this label, extract up to next bold label or end
+            section_pattern = rf'\*\*(?:{label})\*\*:(.*?)(?=\*\*|\n##|\Z)'
+            sections = re.findall(section_pattern, body, re.IGNORECASE | re.MULTILINE | re.DOTALL)
+            for section in sections:
+                # Extract all #N references from this section
+                all_refs = re.findall(r'#(\d+)', section)
+                links[link_type].extend(int(ref) for ref in all_refs)
     
     # Generic pattern: find all issue references in traceability sections
     # Look for ## Traceability or ## Traces To sections and extract all #N references
