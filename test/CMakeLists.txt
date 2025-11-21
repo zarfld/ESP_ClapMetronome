@@ -336,6 +336,16 @@ target_link_libraries(test_config_migration gtest gtest_main)
 target_compile_definitions(test_config_migration PRIVATE NATIVE_BUILD UNIT_TEST)
 gtest_discover_tests(test_config_migration)
 
+# Test 7: Config Performance (AC-CFG-009)
+add_executable(test_config_performance
+    test_config/test_performance.cpp
+    ${CONFIG_SOURCES}
+)
+target_include_directories(test_config_performance PRIVATE ${COMMON_INCLUDES})
+target_link_libraries(test_config_performance gtest gtest_main)
+target_compile_definitions(test_config_performance PRIVATE NATIVE_BUILD UNIT_TEST)
+gtest_discover_tests(test_config_performance)
+
 # ============================================================================
 # CUSTOM TARGETS FOR CONVENIENT EXECUTION
 # ============================================================================
