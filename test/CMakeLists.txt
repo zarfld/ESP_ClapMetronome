@@ -366,6 +366,16 @@ target_link_libraries(test_timing_manager gtest gtest_main)
 target_compile_definitions(test_timing_manager PRIVATE NATIVE_BUILD UNIT_TEST)
 gtest_discover_tests(test_timing_manager)
 
+# Test 2: RTC I2C Integration (AC-TIME-003)
+add_executable(test_rtc_integration
+    test_timing/test_rtc_integration.cpp
+    ${TIMING_SOURCES}
+)
+target_include_directories(test_rtc_integration PRIVATE ${COMMON_INCLUDES})
+target_link_libraries(test_rtc_integration gtest gtest_main)
+target_compile_definitions(test_rtc_integration PRIVATE NATIVE_BUILD UNIT_TEST)
+gtest_discover_tests(test_rtc_integration)
+
 # ============================================================================
 # CUSTOM TARGETS FOR CONVENIENT EXECUTION
 # ============================================================================
