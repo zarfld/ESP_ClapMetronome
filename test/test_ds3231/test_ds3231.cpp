@@ -18,6 +18,7 @@
  *   - Time reads correctly from RTC
  */
 
+#ifndef NATIVE_BUILD
 #include <unity.h>
 #include <Arduino.h>
 #include <Wire.h>
@@ -337,3 +338,13 @@ void setup(void) {
 void loop(void) {
     // Empty loop - tests run once in setup()
 }
+
+#else
+// Native build - skip DS3231 hardware tests
+#include <gtest/gtest.h>
+
+TEST(DS3231Test, NativeBuildSkipped) {
+    GTEST_SKIP() << "DS3231 RTC tests require ESP32 hardware. Run with: pio test -e esp32dev --filter test_ds3231";
+}
+
+#endif  // NATIVE_BUILD

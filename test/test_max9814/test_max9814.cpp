@@ -22,6 +22,7 @@
  *   - GAIN control functional via GPIO26
  */
 
+#ifndef NATIVE_BUILD
 #include <unity.h>
 #include <Arduino.h>
 
@@ -607,3 +608,13 @@ void setup(void) {
 void loop(void) {
     // Empty loop
 }
+
+#else
+// Native build - skip MAX9814 hardware tests
+#include <gtest/gtest.h>
+
+TEST(MAX9814Test, NativeBuildSkipped) {
+    GTEST_SKIP() << "MAX9814 microphone tests require ESP32 hardware. Run with: pio test -e esp32dev --filter test_max9814";
+}
+
+#endif  // NATIVE_BUILD

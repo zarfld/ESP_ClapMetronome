@@ -28,6 +28,7 @@
  *   - Clap detection works with timestamp
  */
 
+#ifndef NATIVE_BUILD
 #include <unity.h>
 #include <Arduino.h>
 #include <Wire.h>
@@ -464,3 +465,13 @@ void setup(void) {
 void loop(void) {
     // Empty loop
 }
+
+#else
+// Native build - skip hardware integration tests
+#include <gtest/gtest.h>
+
+TEST(HardwareCombinedTest, NativeBuildSkipped) {
+    GTEST_SKIP() << "Hardware combined tests require ESP32 with DS3231 RTC + MAX9814 microphone. Run with: pio test -e esp32dev --filter test_hardware_combined";
+}
+
+#endif  // NATIVE_BUILD

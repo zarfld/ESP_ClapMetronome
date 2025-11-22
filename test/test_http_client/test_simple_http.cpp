@@ -169,4 +169,12 @@ void loop() {
     // Tests run once in setup()
 }
 
+#else
+// Native build - skip ESP32-specific HTTP tests
+#include <gtest/gtest.h>
+
+TEST(SimpleHttpTest, NativeBuildSkipped) {
+    GTEST_SKIP() << "HTTP Client tests require ESP32 hardware with WiFi. Run with: pio test -e esp32dev --filter test_simple_http";
+}
+
 #endif  // NATIVE_BUILD

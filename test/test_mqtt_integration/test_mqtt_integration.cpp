@@ -13,6 +13,7 @@
  * @date 2025-11-21
  */
 
+#ifndef NATIVE_BUILD
 #include <unity.h>
 #include <WiFi.h>
 #include "mqtt/MQTTClient.h"
@@ -344,3 +345,13 @@ void setup() {
 void loop() {
     // Tests run once in setup()
 }
+
+#else
+// Native build - skip MQTT integration tests
+#include <gtest/gtest.h>
+
+TEST(MQTTIntegrationTest, NativeBuildSkipped) {
+    GTEST_SKIP() << "MQTT Integration tests require ESP32 hardware with WiFi. Run with: pio test -e esp32dev --filter test_mqtt_integration";
+}
+
+#endif  // NATIVE_BUILD

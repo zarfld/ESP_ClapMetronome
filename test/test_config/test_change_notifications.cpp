@@ -84,7 +84,7 @@ TEST_F(ConfigChangeNotificationsTest, AudioConfig_CallbackFiredOnChange) {
     EXPECT_TRUE(config_->setAudioConfig(audio));
     
     // Callback should have been fired
-    EXPECT_EQ(getCallbackCount(), 1);
+    EXPECT_EQ(getCallbackCount(), 1ULL);
     EXPECT_EQ(getLastCallbackSection(), ConfigChangeEvent::Section::AUDIO);
 }
 
@@ -120,17 +120,17 @@ TEST_F(ConfigChangeNotificationsTest, AudioConfig_CallbackOnEachValidChange) {
     // Change 1
     audio.sample_rate = 12000;
     EXPECT_TRUE(config_->setAudioConfig(audio));
-    EXPECT_EQ(getCallbackCount(), 1);
+    EXPECT_EQ(getCallbackCount(), 1ULL);
     
     // Change 2
     audio.threshold_margin = 100;
     EXPECT_TRUE(config_->setAudioConfig(audio));
-    EXPECT_EQ(getCallbackCount(), 2);
+    EXPECT_EQ(getCallbackCount(), 2ULL);
     
     // Change 3
     audio.gain_level = 60;
     EXPECT_TRUE(config_->setAudioConfig(audio));
-    EXPECT_EQ(getCallbackCount(), 3);
+    EXPECT_EQ(getCallbackCount(), 3ULL);
     
     // All should be AUDIO section
     for (const auto& record : callback_records_) {
@@ -162,7 +162,7 @@ TEST_F(ConfigChangeNotificationsTest, BPMConfig_NoCallbackOnValidationFailure) {
     
     EXPECT_FALSE(config_->setBPMConfig(bpm));
     
-    EXPECT_EQ(getCallbackCount(), 0);
+    EXPECT_EQ(getCallbackCount(), 0ULL);
 }
 
 TEST_F(ConfigChangeNotificationsTest, BPMConfig_CallbackOnMultipleChanges) {
@@ -179,7 +179,7 @@ TEST_F(ConfigChangeNotificationsTest, BPMConfig_CallbackOnMultipleChanges) {
     bpm.stability_threshold = 8;
     EXPECT_TRUE(config_->setBPMConfig(bpm));
     
-    EXPECT_EQ(getCallbackCount(), 3);
+    EXPECT_EQ(getCallbackCount(), 3ULL);
     for (const auto& record : callback_records_) {
         EXPECT_EQ(record.section, ConfigChangeEvent::Section::BPM);
     }
@@ -273,7 +273,7 @@ TEST_F(ConfigChangeNotificationsTest, MixedChanges_CorrectSectionsReported) {
     EXPECT_EQ(getLastCallbackSection(), ConfigChangeEvent::Section::NETWORK);
     
     // Should have 4 callbacks total
-    EXPECT_EQ(getCallbackCount(), 4);
+    EXPECT_EQ(getCallbackCount(), 4ULL);
     
     // Verify sections in order
     EXPECT_EQ(callback_records_[0].section, ConfigChangeEvent::Section::AUDIO);
@@ -292,7 +292,7 @@ TEST_F(ConfigChangeNotificationsTest, FactoryReset_CallbackFiredWithALLSection) 
     config_->factoryReset();
     
     // Callback should have been fired
-    EXPECT_EQ(getCallbackCount(), 1);
+    EXPECT_EQ(getCallbackCount(), 1ULL);
     EXPECT_EQ(getLastCallbackSection(), ConfigChangeEvent::Section::ALL);
 }
 
@@ -308,13 +308,13 @@ TEST_F(ConfigChangeNotificationsTest, FactoryReset_CallbackAfterConfigChanges) {
     bpm.min_bpm = 60;
     config_->setBPMConfig(bpm);
     
-    EXPECT_EQ(getCallbackCount(), 2);
+    EXPECT_EQ(getCallbackCount(), 2ULL);
     
     // Factory reset
     config_->factoryReset();
     
     // Should have 3 callbacks now (2 changes + 1 reset)
-    EXPECT_EQ(getCallbackCount(), 3);
+    EXPECT_EQ(getCallbackCount(), 3ULL);
     EXPECT_EQ(callback_records_[2].section, ConfigChangeEvent::Section::ALL);
 }
 
@@ -425,5 +425,5 @@ TEST_F(ConfigChangeNotificationsTest, CallbackWithNoChanges_NotFiredOnGetters) {
     config_->getOutputConfig();
     config_->getNetworkConfig();
     
-    EXPECT_EQ(getCallbackCount(), 0);
+    EXPECT_EQ(getCallbackCount(), 0ULL);
 }

@@ -17,7 +17,7 @@
 #include <cmath>
 
 #ifdef UNIT_TEST
-#include "../test/mocks/time_mock.h"
+#include "../mocks/time_mock.h"
 #endif
 
 /**
