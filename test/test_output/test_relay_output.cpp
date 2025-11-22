@@ -305,7 +305,7 @@ TEST_F(RelayOutputTest, RelayStats_TrackPulseCount) {
     controller->pulseRelay();
     
     RelayStats after_second = controller->getRelayStats();
-    EXPECT_EQ(after_second.pulse_count, 2);
+    EXPECT_EQ(after_second.pulse_count, 2U);
     EXPECT_GT(after_second.last_pulse_us, after_first.last_pulse_us);
 }
 
