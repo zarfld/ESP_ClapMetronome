@@ -340,11 +340,8 @@ void loop(void) {
 }
 
 #else
-// Native build - skip DS3231 hardware tests
-#include <gtest/gtest.h>
-
-TEST(DS3231Test, NativeBuildSkipped) {
-    GTEST_SKIP() << "DS3231 RTC tests require ESP32 hardware. Run with: pio test -e esp32dev --filter test_ds3231";
-}
+// Native build - hardware-specific test, no native implementation
+// Requires ESP32 hardware with DS3231 RTC on I2C
+// File intentionally empty for native builds to skip compilation
 
 #endif  // NATIVE_BUILD

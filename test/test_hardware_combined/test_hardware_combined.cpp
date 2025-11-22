@@ -467,11 +467,8 @@ void loop(void) {
 }
 
 #else
-// Native build - skip hardware integration tests
-#include <gtest/gtest.h>
-
-TEST(HardwareCombinedTest, NativeBuildSkipped) {
-    GTEST_SKIP() << "Hardware combined tests require ESP32 with DS3231 RTC + MAX9814 microphone. Run with: pio test -e esp32dev --filter test_hardware_combined";
-}
+// Native build - hardware-specific test, no native implementation
+// Requires ESP32 hardware with DS3231 RTC + MAX9814 microphone
+// File intentionally empty for native builds to skip compilation
 
 #endif  // NATIVE_BUILD

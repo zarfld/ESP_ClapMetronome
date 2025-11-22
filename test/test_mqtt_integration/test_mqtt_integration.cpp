@@ -347,11 +347,8 @@ void loop() {
 }
 
 #else
-// Native build - skip MQTT integration tests
-#include <gtest/gtest.h>
-
-TEST(MQTTIntegrationTest, NativeBuildSkipped) {
-    GTEST_SKIP() << "MQTT Integration tests require ESP32 hardware with WiFi. Run with: pio test -e esp32dev --filter test_mqtt_integration";
-}
+// Native build - hardware-specific test, no native implementation
+// Requires ESP32 hardware with WiFi and MQTT broker
+// File intentionally empty for native builds to skip compilation
 
 #endif  // NATIVE_BUILD

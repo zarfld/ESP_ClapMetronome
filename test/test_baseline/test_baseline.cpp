@@ -322,11 +322,8 @@ void loop(void) {
 }
 
 #else
-// Native build - skip baseline hardware tests
-#include <gtest/gtest.h>
-
-TEST(BaselineTest, NativeBuildSkipped) {
-    GTEST_SKIP() << "Baseline tests require ESP32 hardware. Run with: pio test -e esp32dev --filter test_baseline";
-}
+// Native build - hardware-specific test, no native implementation
+// Requires ESP32 hardware for boot sequence, GPIO, ADC, I2C tests
+// File intentionally empty for native builds to skip compilation
 
 #endif  // NATIVE_BUILD
