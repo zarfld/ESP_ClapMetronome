@@ -268,9 +268,9 @@ TEST_F(RelayOutputTest, RelayMultiplePulses_Sequential) {
     
     // Verify all 5 pulses counted
     RelayStats stats = controller->getRelayStats();
-    EXPECT_EQ(stats.pulse_count, 5);
-    EXPECT_EQ(stats.watchdog_triggers, 0);
-    EXPECT_EQ(stats.debounce_rejects, 0);
+    EXPECT_EQ(stats.pulse_count, 5U);
+    EXPECT_EQ(stats.watchdog_triggers, 0U);
+    EXPECT_EQ(stats.debounce_rejects, 0U);
 }
 
 /**
