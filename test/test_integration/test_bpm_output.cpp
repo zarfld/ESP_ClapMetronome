@@ -414,7 +414,7 @@ TEST_F(BPMOutputIntegrationTest, StabilityLoss_MaintainsSync) {
     EXPECT_GT(clocks_after, initial_clocks);  // Clocks continue
     
     // No STOP message sent
-    EXPECT_EQ(output_controller_->getMidiStats().stop_messages_sent, 0);
+    EXPECT_EQ(output_controller_->getMidiStats().stop_messages_sent, 0U);
 }
 
 // ========== Category 4: End-to-End Integration (3 tests) ==========
@@ -546,7 +546,7 @@ TEST_F(BPMOutputIntegrationTest, EndToEnd_StopAndRestart) {
     // Verify stopped
     EXPECT_EQ(output_controller_->getState(), OutputState::STOPPED);
     MidiStats stats2 = output_controller_->getMidiStats();
-    EXPECT_GE(stats2.stop_messages_sent, 1);
+    EXPECT_GE(stats2.stop_messages_sent, 1U);
     
     // Clear taps
     bpm_engine_->clear();

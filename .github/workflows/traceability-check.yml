@@ -1,11 +1,36 @@
 name: Traceability Validation
 
+# 🎯 LIGHTWEIGHT TRACEABILITY VALIDATION (2-3 min)
+# Complements ci-standards-compliance.yml with fast, focused traceability checks
+#
+# 📋 Purpose:
+#   - Fast feedback on PRs: Posts traceability summary comment
+#   - Issue validation: Checks traceability links when issues are created/edited
+#   - Early detection: Catches missing links before full CI runs
+#   - Reduced feedback loop: Quick validation without running tests
+#
+# 🔄 Workflow Strategy:
+#   1. This workflow: Fast traceability validation (on issue/PR events)
+#   2. ci-standards-compliance.yml: Full CI/CD with tests (on push/PR events)
+#
+#   Both workflows run on PRs:
+#   - This workflow: Quick traceability check + PR comment
+#   - Full CI: Complete validation with matrix testing
+#
+# ⚡ Triggers:
+#   - Pull requests: opened, synchronized, reopened
+#   - Issues: opened, edited (validates links immediately)
+#   - Manual: workflow_dispatch
+#
+# 📊 For comprehensive CI/CD (tests, security, compliance):
+#   → See .github/workflows/ci-standards-compliance.yml
+
 on:
   pull_request:
     types: [opened, synchronize, reopened]
   issues:
     types: [opened, edited]
-  workflow_dispatch:  # Allow manual trigger
+  workflow_dispatch: # Allow manual trigger
 
 jobs:
   validate-traceability:
@@ -14,20 +39,20 @@ jobs:
       contents: read
       issues: read
       pull-requests: write
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
-      
+          python-version: "3.11"
+
       - name: Install dependencies
         run: |
           pip install requests pyyaml
-      
+
       - name: Check for orphaned requirements
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -39,7 +64,7 @@ jobs:
           }
         continue-on-error: true
         id: orphan-check
-      
+
       - name: Generate traceability report
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -57,14 +82,14 @@ jobs:
             echo "2. Link issues using 'Traces to: #N' syntax" >> reports/traceability.md
             echo "3. See docs/QUICK-START-github-issues.md for guidance" >> reports/traceability.md
           }
-      
+
       - name: Upload traceability report
         uses: actions/upload-artifact@v4
         with:
           name: traceability-report
           path: reports/traceability.md
           retention-days: 30
-      
+
       - name: Comment on PR with report summary
         if: github.event_name == 'pull_request'
         uses: actions/github-script@v7
@@ -72,27 +97,27 @@ jobs:
           script: |
             const fs = require('fs');
             const report = fs.readFileSync('reports/traceability.md', 'utf8');
-            
+
             // Extract summary section
             const summaryMatch = report.match(/## Summary\n([\s\S]*?)##/);
             const summary = summaryMatch ? summaryMatch[1] : 'Summary not available';
-            
+
             const comment = `## 📊 Traceability Report
-            
+
             ${summary}
-            
+
             📎 Full report available in workflow artifacts.
-            
+
             [View detailed traceability matrix](../actions/runs/${{ github.run_id }})
             `;
-            
+
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
               body: comment
             });
-      
+
       - name: Check orphan results
         if: steps.orphan-check.outcome == 'failure'
         run: |

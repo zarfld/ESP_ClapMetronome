@@ -33,16 +33,16 @@ namespace {
     bool mock_nvs_initialized = false;
     
     // Mock NVS interface (injected via friend class or test-specific build)
-    void mockNvsReset() {
+    [[maybe_unused]] void mockNvsReset() {
         mock_nvs_storage.clear();
         mock_nvs_initialized = false;
     }
     
-    void mockNvsInit() {
+    [[maybe_unused]] void mockNvsInit() {
         mock_nvs_initialized = true;
     }
     
-    bool mockNvsWrite(const std::string& key, const void* data, size_t size) {
+    [[maybe_unused]] bool mockNvsWrite(const std::string& key, const void* data, size_t size) {
         if (!mock_nvs_initialized) return false;
         
         std::vector<uint8_t> value(size);
@@ -51,7 +51,7 @@ namespace {
         return true;
     }
     
-    bool mockNvsRead(const std::string& key, void* data, size_t size) {
+    [[maybe_unused]] bool mockNvsRead(const std::string& key, void* data, size_t size) {
         if (!mock_nvs_initialized) return false;
         
         auto it = mock_nvs_storage.find(key);
@@ -67,7 +67,7 @@ namespace {
         return true;
     }
     
-    void mockNvsErase() {
+    [[maybe_unused]] void mockNvsErase() {
         mock_nvs_storage.clear();
     }
 }
