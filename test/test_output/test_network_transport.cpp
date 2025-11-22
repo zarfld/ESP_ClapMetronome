@@ -334,5 +334,5 @@ TEST_F(NetworkTransportTest, BufferOverflow_ProtectedAgainstBurst) {
     
     // And: Stats are consistent
     auto stats = controller->getNetworkStats();
-    EXPECT_EQ(stats.packets_sent, success_count);
+    EXPECT_EQ(stats.packets_sent, static_cast<uint32_t>(success_count));
 }

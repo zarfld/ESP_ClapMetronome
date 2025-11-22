@@ -102,7 +102,7 @@ TEST_F(RelayOutputTest, RelayPulse_ConfiguredDuration) {
     // Verify stats show relay off
     RelayStats stats_after = controller->getRelayStats();
     EXPECT_FALSE(stats_after.currently_on);
-    EXPECT_EQ(stats_after.pulse_count, 1);
+    EXPECT_EQ(stats_after.pulse_count, 1U);
 }
 
 /**
