@@ -210,7 +210,7 @@ TEST_F(RelayOutputTest, RelayDebounce_MinimumOffTime) {
     result = controller->pulseRelay();
     EXPECT_TRUE(result);
     EXPECT_TRUE(controller->getRelayGPIO());
-    EXPECT_EQ(controller->getRelayStats().pulse_count, 2);
+    EXPECT_EQ(controller->getRelayStats().pulse_count, 2U);
 }
 
 /**

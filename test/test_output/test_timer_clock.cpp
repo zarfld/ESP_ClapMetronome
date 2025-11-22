@@ -147,7 +147,7 @@ TEST_F(TimerClockTest, ClockSending_FromISR) {
     
     // Verify timestamp recorded
     TimerStats stats = controller->getTimerStats();
-    EXPECT_GT(stats.total_interrupts, 0);
+    EXPECT_GT(stats.total_interrupts, 0U);
 }
 
 /**
@@ -307,9 +307,9 @@ TEST_F(TimerClockTest, JitterMeasurement_UnderThreshold) {
     EXPECT_LT(stats.jitter_ms, 1.0f);
     
     // Verify statistics populated
-    EXPECT_EQ(stats.total_interrupts, 100);
-    EXPECT_EQ(stats.clocks_sent, 100);
-    EXPECT_EQ(stats.missed_clocks, 0);
+    EXPECT_EQ(stats.total_interrupts, 100U);
+    EXPECT_EQ(stats.clocks_sent, 100U);
+    EXPECT_EQ(stats.missed_clocks, 0U);
 }
 
 /**
@@ -333,11 +333,11 @@ TEST_F(TimerClockTest, ISRExecutionTime_Under10us) {
     uint64_t execution_time = end_us - start_us;
     
     // ISR should complete in <10µs
-    EXPECT_LT(execution_time, 10);
+    EXPECT_LT(execution_time, 10ULL);
     
     // Also verify stats track max ISR time
     TimerStats stats = controller->getTimerStats();
-    EXPECT_LT(stats.max_isr_time_us, 10);
+    EXPECT_LT(stats.max_isr_time_us, 10U);
 }
 
 /**
