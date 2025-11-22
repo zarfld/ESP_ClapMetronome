@@ -219,7 +219,7 @@ TEST_F(WebServerLogicTest, RateLimiting_MaximumTwoHz) {
     // Check intervals between broadcasts (should be >= 500ms)
     for (size_t i = 1; i < broadcast_times.size(); i++) {
         uint64_t interval = broadcast_times[i] - broadcast_times[i-1];
-        EXPECT_GE(interval, 500)
+        EXPECT_GE(interval, 500ULL)
             << "Broadcast interval " << interval << "ms < 500ms (rate limit violated)";
     }
     
@@ -293,7 +293,7 @@ TEST_F(WebServerLogicTest, RateLimiting_QueueBacklog) {
     }
     
     // Verify all messages broadcast
-    EXPECT_EQ(queue_->broadcastCount(), 5);
+    EXPECT_EQ(queue_->broadcastCount(), 5UL);
     
     // Verify message order preserved
     const auto& broadcasts = queue_->getBroadcasts();

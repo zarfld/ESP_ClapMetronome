@@ -225,7 +225,7 @@ TEST_F(NetworkTransportTest, SendClock_TransmitsUDPPacket) {
     // And: Network stats updated
     auto stats = controller->getNetworkStats();
     EXPECT_EQ(stats.packets_sent, 1U);
-    EXPECT_GT(stats.bytes_sent, 0);
+    EXPECT_GT(stats.bytes_sent, 0U);
 }
 
 /**
@@ -243,7 +243,7 @@ TEST_F(NetworkTransportTest, SendStartStop_TransmitsMultiplePackets) {
     
     // Then: Three packets sent
     auto stats = controller->getNetworkStats();
-    EXPECT_EQ(stats.packets_sent, 3);
+    EXPECT_EQ(stats.packets_sent, 3U);
 }
 
 /**
@@ -263,7 +263,7 @@ TEST_F(NetworkTransportTest, PacketSize_MinimalOverhead) {
     auto stats = controller->getNetworkStats();
     size_t avg_size = stats.bytes_sent / stats.packets_sent;
     
-    EXPECT_LT(avg_size, 50);  // RFC 6295 allows compact encoding
+    EXPECT_LT(avg_size, 50UL);  // RFC 6295 allows compact encoding
 }
 
 // ========== Error Handling Tests ==========

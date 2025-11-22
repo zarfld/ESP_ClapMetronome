@@ -207,7 +207,7 @@ TEST_F(ConfigChangeNotificationsTest, OutputConfig_NoCallbackOnValidationFailure
     OutputConfig output = config_->getOutputConfig();
     output.midi_channel = 0;  // Invalid
     
-    EXPECT_FALSE(config_->setAudioConfig(audio));
+    EXPECT_FALSE(config_->setOutputConfig(output));
     
     EXPECT_EQ(getCallbackCount(), 0ULL);
 }
@@ -394,7 +394,7 @@ TEST_F(ConfigChangeNotificationsTest, Timestamp_Reasonable) {
     uint64_t timestamp = callback_records_[0].timestamp_us;
     
     // Timestamp should be reasonable (not zero, not garbage)
-    EXPECT_GT(timestamp, 0);
+    EXPECT_GT(timestamp, 0ULL);
     
     // Should be less than ~100 years in microseconds (reasonable upper bound)
     // 100 years * 365 days * 24 hours * 3600 sec * 1,000,000 us = ~3.15e15

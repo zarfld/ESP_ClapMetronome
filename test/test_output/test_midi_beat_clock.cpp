@@ -302,7 +302,7 @@ TEST_F(MIDIBeatClockTest, StopSync_HaltsClock) {
 TEST_F(MIDIBeatClockTest, ClockCounter_IncrementsCorrectly) {
     // Given: Controller syncing
     controller->startSync();
-    EXPECT_EQ(controller->getOutputState().clocks_sent, 0);
+    EXPECT_EQ(controller->getOutputState().clocks_sent, 0U);
     
     // When: Send 24 clocks (1 quarter note)
     for (int i = 0; i < 24; i++) {

@@ -371,7 +371,7 @@ TEST_F(BPMOutputIntegrationTest, UnstableBPM_NoAutoSync) {
     
     // No MIDI messages sent
     MidiStats stats = output_controller_->getMidiStats();
-    EXPECT_EQ(stats.start_messages_sent, 0);
+    EXPECT_EQ(stats.start_messages_sent, 0U);
 }
 
 /**
@@ -538,7 +538,7 @@ TEST_F(BPMOutputIntegrationTest, EndToEnd_StopAndRestart) {
     
     EXPECT_EQ(output_controller_->getState(), OutputState::RUNNING);
     MidiStats stats1 = output_controller_->getMidiStats();
-    EXPECT_GE(stats1.start_messages_sent, 1);
+    EXPECT_GE(stats1.start_messages_sent, 1U);
     
     // Stop sync
     output_controller_->stopSync();

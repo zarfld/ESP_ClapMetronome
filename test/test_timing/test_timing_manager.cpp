@@ -345,7 +345,7 @@ TEST_F(TimingManagerTest, BootInitialization_Under100ms) {
     
     // Verify initialized correctly
     uint64_t ts = mgr->getTimestampUs();
-    EXPECT_GT(ts, 0) << "Timestamp not available after init()";
+    EXPECT_GT(ts, 0ULL) << "Timestamp not available after init()";
     
     delete mgr;
 }

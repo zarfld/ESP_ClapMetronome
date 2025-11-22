@@ -259,7 +259,7 @@ TEST_F(PerformanceTest, MidiLatency_Under10ms) {
     
     // Verify MIDI message was sent
     MidiStats stats = controller->getMidiStats();
-    EXPECT_GT(stats.clock_messages_sent, 0);
+    EXPECT_GT(stats.clock_messages_sent, 0U);
 }
 
 /**
@@ -358,7 +358,7 @@ TEST_F(PerformanceTest, HighBPM_240BPM_Stable) {
     
     // Verify all callbacks processed (no dropped beats)
     MidiStats stats = controller->getMidiStats();
-    EXPECT_EQ(stats.clock_messages_sent, 960) << "Expected 960 clocks, got " << stats.clock_messages_sent;
+    EXPECT_EQ(stats.clock_messages_sent, 960U) << "Expected 960 clocks, got " << stats.clock_messages_sent;
 }
 
 /**
@@ -497,6 +497,6 @@ TEST_F(PerformanceTest, MultiOutput_MidiAndRelay_Coordinated) {
     MidiStats midi_stats = controller->getMidiStats();
     RelayStats relay_stats = controller->getRelayStats();
     
-    EXPECT_EQ(midi_stats.clock_messages_sent, 200);  // 100 with relay + 100 jitter measurement
-    EXPECT_GE(relay_stats.pulse_count, 4);  // 100/24 = ~4 pulses
+    EXPECT_EQ(midi_stats.clock_messages_sent, 200U);  // 100 with relay + 100 jitter measurement
+    EXPECT_GE(relay_stats.pulse_count, 4U);  // 100/24 = ~4 pulses
 }
