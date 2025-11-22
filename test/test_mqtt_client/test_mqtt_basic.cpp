@@ -1,4 +1,28 @@
-#ifndef NATIVE_BUILD
+#ifdef NATIVE_BUILD
+// Native build - GoogleTest
+#include <gtest/gtest.h>
+#include "../../src/mqtt/MQTTClient.h"
+
+using namespace clap_metronome;
+
+TEST(MQTTBasicTest, Initialization) {
+    // Arrange
+    MQTTConfig mqtt_config;
+    mqtt_config.enabled = false;
+    mqtt_config.broker_host = "";
+    mqtt_config.broker_port = 1883;
+    mqtt_config.device_id = "test-device";
+    
+    // Act
+    MQTTClient mqtt_client(&mqtt_config);
+    
+    // Assert
+    EXPECT_FALSE(mqtt_client.isConnected()) 
+        << "Client should not be connected on initialization";
+    EXPECT_STREQ("", mqtt_client.getLastError());
+}
+
+#else
 // ESP32/ESP8266 build - Unity framework
 #include <unity.h>
 #include "mqtt/MQTTClient.h"
@@ -39,14 +63,6 @@ void setup() {
 
 void loop() {
     // Tests run once in setup()
-}
-
-#else
-// Native build - skip MQTT hardware tests
-#include <gtest/gtest.h>
-
-TEST(MQTTBasicTest, NativeBuildSkipped) {
-    GTEST_SKIP() << "MQTT Client tests require ESP32/ESP8266 hardware. Run with: pio test -e esp32dev --filter test_mqtt_basic";
 }
 
 #endif  // NATIVE_BUILD
