@@ -280,6 +280,7 @@ TEST_F(WebServerTest, StaticFiles_ServeIndexHtml) {
     
     // Register handler for root path
     server_->onGet("/", [&](const HttpRequest& req, HttpResponse& res) {
+        (void)req;
         handler_called = true;
         res.status_code = 200;
         res.content_type = "text/html";
@@ -334,6 +335,7 @@ TEST_F(WebServerTest, RestAPI_GetConfig) {
     std::string response_body;
     
     server_->onGet("/api/config", [&](const HttpRequest& req, HttpResponse& res) {
+        (void)req;
         res.status_code = 200;
         res.content_type = "application/json";
         res.body = R"({
@@ -418,6 +420,7 @@ TEST_F(WebServerTest, RestAPI_FactoryReset) {
     bool reset_triggered = false;
     
     server_->onPost("/api/factory-reset", [&](const HttpRequest& req, HttpResponse& res) {
+        (void)req;
         reset_triggered = true;
         res.status_code = 200;
         res.content_type = "application/json";
@@ -501,7 +504,7 @@ TEST_F(WebServerTest, WebSocket_BroadcastBPM) {
     const auto& stats = server_->getStats();
     
     // Broadcast was attempted
-    EXPECT_GE(stats.websocket_broadcasts, 0) << "Broadcast count tracked";
+    EXPECT_GE(stats.websocket_broadcasts, 0U) << "Broadcast count tracked";
     
     std::cout << "WebSocket Broadcast:\n"
               << "  Message: BPM Update\n"

@@ -883,15 +883,11 @@ void loop() {
 
 #else
 // Native build - skip ESP32-specific tests
-#warning "ESP32 integration tests skipped on native build"
+// Use GoogleTest for native builds
+#include <gtest/gtest.h>
 
-void setup() {
-    Serial.begin(115200);
-    Serial.println("ESP32 integration tests require hardware (pio test -e esp32dev)");
-}
-
-void loop() {
-    delay(1000);
+TEST(WebIntegrationTest, NativeBuildSkipped) {
+    GTEST_SKIP() << "ESP32 integration tests require hardware (pio test -e esp32dev)";
 }
 
 #endif  // NATIVE_BUILD

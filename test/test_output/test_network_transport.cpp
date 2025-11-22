@@ -169,7 +169,7 @@ TEST_F(NetworkTransportTest, SystemRealTime_MinimalEncapsulation) {
     auto packet = controller->getLastSentPacket();
     
     // RTP-MIDI packet should be compact (<50 bytes)
-    EXPECT_LT(packet.size(), 50);
+    EXPECT_LT(packet.size(), 50ULL);
     
     // Contains 0xFA
     bool contains_start = false;
@@ -202,8 +202,8 @@ TEST_F(NetworkTransportTest, RTPTimestamp_UsesMicroseconds) {
                          (packet[6] << 8) | packet[7];
     
     // Should be non-zero and match current time
-    EXPECT_GT(timestamp, 0);
-    EXPECT_GE(timestamp, 1000000);  // At least 1 second
+    EXPECT_GT(timestamp, 0U);
+    EXPECT_GE(timestamp, 1000000U);  // At least 1 second
 }
 
 // ========== Network Transmission Tests ==========
@@ -224,7 +224,7 @@ TEST_F(NetworkTransportTest, SendClock_TransmitsUDPPacket) {
     
     // And: Network stats updated
     auto stats = controller->getNetworkStats();
-    EXPECT_EQ(stats.packets_sent, 1);
+    EXPECT_EQ(stats.packets_sent, 1U);
     EXPECT_GT(stats.bytes_sent, 0);
 }
 

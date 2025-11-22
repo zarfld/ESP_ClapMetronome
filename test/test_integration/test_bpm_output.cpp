@@ -114,7 +114,7 @@ TEST_F(BPMOutputIntegrationTest, BPMUpdate_UpdatesTimerInterval) {
     // Verify timer interval updated in OutputController
     // Expected: 60,000,000 / 120 / 24 = 20833 µs
     uint32_t expected_interval = output_controller_->calculateTimerInterval(120, 24);
-    EXPECT_EQ(expected_interval, 20833);
+    EXPECT_EQ(expected_interval, 20833U);
     
     // Verify timer stats reflect new interval
     TimerStats stats = output_controller_->getTimerStats();
@@ -342,7 +342,7 @@ TEST_F(BPMOutputIntegrationTest, StableDetection_StartsSync) {
     
     // Verify START message sent
     MidiStats stats = output_controller_->getMidiStats();
-    EXPECT_GE(stats.start_messages_sent, 1);
+    EXPECT_GE(stats.start_messages_sent, 1U);
 }
 
 /**

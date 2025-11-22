@@ -198,8 +198,8 @@ TEST_F(WebServerLogicTest, RateLimiting_MaximumTwoHz) {
         EXPECT_TRUE(queue_->queueMessage(data, start_time + i));
     }
     
-    EXPECT_EQ(queue_->queueSize(), 10);
-    EXPECT_EQ(queue_->broadcastCount(), 0);
+    EXPECT_EQ(queue_->queueSize(), 10ULL);
+    EXPECT_EQ(queue_->broadcastCount(), 0ULL);
     
     // Process queue at 0ms intervals (should be rate-limited to 500ms)
     std::vector<uint64_t> broadcast_times;
@@ -214,7 +214,7 @@ TEST_F(WebServerLogicTest, RateLimiting_MaximumTwoHz) {
     }
     
     // Verify rate limiting
-    EXPECT_GE(broadcast_times.size(), 4);  // At least 4 messages in 2000ms
+    EXPECT_GE(broadcast_times.size(), 4ULL);  // At least 4 messages in 2000ms
     
     // Check intervals between broadcasts (should be >= 500ms)
     for (size_t i = 1; i < broadcast_times.size(); i++) {
@@ -472,7 +472,7 @@ TEST_F(WebServerLogicTest, Integration_RealisticBPMUpdates) {
     std::cout << "Phase 2: Processing with rate limiting...\n";
     int processed = 0;
     while (queue_->queueSize() > 0 && processed < 50) {
-        int sent = queue_->processQueue(current_time);
+        (void)queue_->processQueue(current_time);  // Suppress unused warning
         processed++;
         current_time += 100;  // Process every 100ms
     }

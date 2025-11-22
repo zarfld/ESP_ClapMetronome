@@ -190,25 +190,25 @@ TEST_F(ConfigDefaultValuesTest, NetworkConfig_HasCorrectDefaults) {
     EXPECT_EQ(network.wifi_enabled, NetworkConfig::DEFAULT_WIFI_ENABLED)
         << "WiFi should be enabled by default";
     
-    EXPECT_TRUE(network.wifi_ssid.empty())
+    EXPECT_EQ(strlen(network.wifi_ssid), 0ULL)
         << "WiFi SSID should be empty by default";
     
-    EXPECT_TRUE(network.wifi_password.empty())
+    EXPECT_EQ(strlen(network.wifi_password), 0ULL)
         << "WiFi password should be empty by default";
     
     EXPECT_EQ(network.mqtt_enabled, NetworkConfig::DEFAULT_MQTT_ENABLED)
         << "MQTT should be disabled by default";
     
-    EXPECT_TRUE(network.mqtt_broker.empty())
+    EXPECT_EQ(strlen(network.mqtt_broker), 0ULL)
         << "MQTT broker should be empty by default";
     
     EXPECT_EQ(network.mqtt_port, NetworkConfig::DEFAULT_MQTT_PORT)
         << "MQTT port should default to 1883";
     
-    EXPECT_TRUE(network.mqtt_username.empty())
+    EXPECT_EQ(strlen(network.mqtt_username), 0ULL)
         << "MQTT username should be empty by default";
     
-    EXPECT_TRUE(network.mqtt_password.empty())
+    EXPECT_EQ(strlen(network.mqtt_password), 0ULL)
         << "MQTT password should be empty by default";
     
     EXPECT_EQ(network.websocket_enabled, NetworkConfig::DEFAULT_WEBSOCKET_ENABLED)

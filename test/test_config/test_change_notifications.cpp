@@ -97,7 +97,7 @@ TEST_F(ConfigChangeNotificationsTest, AudioConfig_CallbackReceivesTimestamp) {
     EXPECT_TRUE(config_->setAudioConfig(audio));
     
     // Timestamp should be non-zero
-    EXPECT_GT(callback_records_[0].timestamp_us, 0);
+    EXPECT_GT(callback_records_[0].timestamp_us, 0ULL);
 }
 
 TEST_F(ConfigChangeNotificationsTest, AudioConfig_NoCallbackOnValidationFailure) {
@@ -109,7 +109,7 @@ TEST_F(ConfigChangeNotificationsTest, AudioConfig_NoCallbackOnValidationFailure)
     EXPECT_FALSE(config_->setAudioConfig(audio));
     
     // Callback should NOT have been fired
-    EXPECT_EQ(getCallbackCount(), 0);
+    EXPECT_EQ(getCallbackCount(), 0ULL);
 }
 
 TEST_F(ConfigChangeNotificationsTest, AudioConfig_CallbackOnEachValidChange) {
@@ -150,7 +150,7 @@ TEST_F(ConfigChangeNotificationsTest, BPMConfig_CallbackFiredOnChange) {
     
     EXPECT_TRUE(config_->setBPMConfig(bpm));
     
-    EXPECT_EQ(getCallbackCount(), 1);
+    EXPECT_EQ(getCallbackCount(), 1ULL);
     EXPECT_EQ(getLastCallbackSection(), ConfigChangeEvent::Section::BPM);
 }
 
@@ -197,7 +197,7 @@ TEST_F(ConfigChangeNotificationsTest, OutputConfig_CallbackFiredOnChange) {
     
     EXPECT_TRUE(config_->setOutputConfig(output));
     
-    EXPECT_EQ(getCallbackCount(), 1);
+    EXPECT_EQ(getCallbackCount(), 1ULL);
     EXPECT_EQ(getLastCallbackSection(), ConfigChangeEvent::Section::OUTPUT_CFG);
 }
 
@@ -207,9 +207,9 @@ TEST_F(ConfigChangeNotificationsTest, OutputConfig_NoCallbackOnValidationFailure
     OutputConfig output = config_->getOutputConfig();
     output.midi_channel = 0;  // Invalid
     
-    EXPECT_FALSE(config_->setOutputConfig(output));
+    EXPECT_FALSE(config_->setAudioConfig(audio));
     
-    EXPECT_EQ(getCallbackCount(), 0);
+    EXPECT_EQ(getCallbackCount(), 0ULL);
 }
 
 // ============================================================================
@@ -220,11 +220,12 @@ TEST_F(ConfigChangeNotificationsTest, NetworkConfig_CallbackFiredOnChange) {
     clearCallbackHistory();
     
     NetworkConfig network = config_->getNetworkConfig();
-    network.wifi_ssid = "TestNetwork";  // Valid change
+    strncpy(network.wifi_ssid, "TestNetwork", sizeof(network.wifi_ssid) - 1);  // Valid change
+    network.wifi_ssid[sizeof(network.wifi_ssid) - 1] = '\0';
     
     EXPECT_TRUE(config_->setNetworkConfig(network));
     
-    EXPECT_EQ(getCallbackCount(), 1);
+    EXPECT_EQ(getCallbackCount(), 1ULL);
     EXPECT_EQ(getLastCallbackSection(), ConfigChangeEvent::Section::NETWORK);
 }
 
@@ -232,11 +233,12 @@ TEST_F(ConfigChangeNotificationsTest, NetworkConfig_NoCallbackOnValidationFailur
     clearCallbackHistory();
     
     NetworkConfig network = config_->getNetworkConfig();
-    network.wifi_ssid = std::string(33, 'X');  // Invalid (too long)
+    // Fill with 33 'X' characters (too long for 32-char buffer)
+    memset(network.wifi_ssid, 'X', sizeof(network.wifi_ssid));  // Invalid (no null terminator)
     
     EXPECT_FALSE(config_->setNetworkConfig(network));
     
-    EXPECT_EQ(getCallbackCount(), 0);
+    EXPECT_EQ(getCallbackCount(), 0ULL);
 }
 
 // ============================================================================

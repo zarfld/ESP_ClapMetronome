@@ -198,7 +198,7 @@ TEST_F(TimingManagerTest, MicrosecondPrecision_AccuracyOver1Second) {
 TEST_F(TimingManagerTest, AutomaticFallback_StillMonotonic) {
     // Initial timestamps should work
     uint64_t t1 = timing_->getTimestampUs();
-    EXPECT_GT(t1, 0);
+    EXPECT_GT(t1, 0ULL);
     
     // Even if RTC fails, timestamps should continue
     std::this_thread::sleep_for(std::chrono::milliseconds(10));

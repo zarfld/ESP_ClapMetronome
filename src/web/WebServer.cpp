@@ -396,7 +396,10 @@ void WebServer::onPost(const std::string& path,
 }
 
 void WebServer::serveStatic(const std::string& path, const std::string& file_path) {
-#ifndef NATIVE_BUILD
+#ifdef NATIVE_BUILD
+    (void)path;
+    (void)file_path;
+#else
     if (async_server_) {
         async_server_->serveStatic(path.c_str(), LittleFS, file_path.c_str());
     }
@@ -420,19 +423,23 @@ void WebServer::onWebSocketMessage(std::function<void(const WebSocketMessage&)> 
 }
 
 void WebServer::broadcastWebSocket(const std::string& message) {
-#ifndef NATIVE_BUILD
+#ifdef NATIVE_BUILD
+    (void)message;
+    // Native build: just increment counter for testing
+    stats_.websocket_broadcasts++;
+#else
     if (async_websocket_) {
         async_websocket_->textAll(message.c_str());
         stats_.websocket_broadcasts++;
     }
-#else
-    // Native build: just increment counter for testing
-    stats_.websocket_broadcasts++;
 #endif
 }
 
 void WebServer::sendWebSocket(uint32_t client_id, const std::string& message) {
-#ifndef NATIVE_BUILD
+#ifdef NATIVE_BUILD
+    (void)client_id;
+    (void)message;
+#else
     if (async_websocket_) {
         async_websocket_->text(client_id, message.c_str());
     }
@@ -449,7 +456,12 @@ void WebServer::broadcastBPM(float bpm, bool stable) {
         return;  // Rate limit exceeded, skip this update
     }
     
-#ifndef NATIVE_BUILD
+#ifdef NATIVE_BUILD
+    (void)bpm;
+    (void)stable;
+    // Native build: simulate broadcast
+    stats_.websocket_broadcasts++;
+#else
     // Create JSON message
     DynamicJsonDocument doc(128);
     doc["bpm"] = bpm;
@@ -460,9 +472,6 @@ void WebServer::broadcastBPM(float bpm, bool stable) {
     
     // Broadcast to all clients
     broadcastWebSocket(message.c_str());
-#else
-    // Native build: simulate broadcast
-    stats_.websocket_broadcasts++;
 #endif
     
     // Record timestamp for rate limiting

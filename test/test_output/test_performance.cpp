@@ -16,8 +16,8 @@
 #include <vector>
 #include <cmath>
 
-#ifdef NATIVE_BUILD
-#include "test/mocks/time_mock.h"
+#ifdef UNIT_TEST
+#include "../test/mocks/time_mock.h"
 #endif
 
 /**

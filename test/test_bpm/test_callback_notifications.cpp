@@ -148,7 +148,7 @@ TEST_F(BPMCallbackTest, CallbackEvent_ContainsTimestamp) {
     addTapsWithInterval(4, 500000, start_time);
     
     // Assert: Timestamp in event
-    EXPECT_GT(last_event_.timestamp_us, 0)
+    EXPECT_GT(last_event_.timestamp_us, 0ULL)
         << "Callback event should include timestamp";
     EXPECT_GE(last_event_.timestamp_us, start_time)
         << "Timestamp should be >= start time";
