@@ -310,7 +310,7 @@ TEST_F(MIDIBeatClockTest, ClockCounter_IncrementsCorrectly) {
     }
     
     // Then: Counter shows 24 clocks
-    EXPECT_EQ(controller->getOutputState().clocks_sent, 24);
+    EXPECT_EQ(controller->getOutputState().clocks_sent, 24U);
     
     // RED: This will FAIL until clocks_sent counter implemented
     // GREEN: Increment clocks_sent++ in sendMIDIClock()

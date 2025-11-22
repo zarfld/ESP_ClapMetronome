@@ -289,7 +289,7 @@ TEST_F(NetworkTransportTest, NetworkDown_ReturnsFailure) {
     
     // And: No packets sent
     auto stats = controller->getNetworkStats();
-    EXPECT_EQ(stats.packets_sent, 0);
+    EXPECT_EQ(stats.packets_sent, 0U);
 }
 
 /**
@@ -309,7 +309,7 @@ TEST_F(NetworkTransportTest, SendTimeout_EnforcedAt10ms) {
     
     // And: Network stats reflect the failure
     auto stats = controller->getNetworkStats();
-    EXPECT_GT(stats.send_failures, 0);  // At least one failure recorded
+    EXPECT_GT(stats.send_failures, 0U);  // At least one failure recorded
 }
 
 /**

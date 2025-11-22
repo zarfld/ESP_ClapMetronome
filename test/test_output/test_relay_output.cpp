@@ -87,7 +87,7 @@ TEST_F(RelayOutputTest, RelayPulse_ConfiguredDuration) {
     // Verify stats updated
     RelayStats stats_during = controller->getRelayStats();
     EXPECT_TRUE(stats_during.currently_on);
-    EXPECT_EQ(stats_during.pulse_count, 1);
+    EXPECT_EQ(stats_during.pulse_count, 1U);
     
     // Advance time by 49ms (still within pulse)
     advance_time_us(49000);
