@@ -200,8 +200,8 @@ TEST_F(RelayOutputTest, RelayDebounce_MinimumOffTime) {
     
     // Verify debounce reject counter
     RelayStats stats = controller->getRelayStats();
-    EXPECT_EQ(stats.debounce_rejects, 1);
-    EXPECT_EQ(stats.pulse_count, 1);  // Only first pulse counted
+    EXPECT_EQ(stats.debounce_rejects, 1U);
+    EXPECT_EQ(stats.pulse_count, 1U);  // Only first pulse counted
     
     // Advance past debounce period (10ms)
     advance_time_us(11000);
