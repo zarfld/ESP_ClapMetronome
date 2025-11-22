@@ -16,6 +16,7 @@
  */
 
 #include <gtest/gtest.h>
+#include <cstring>  // For strncpy, strlen
 #include "../../src/config/ConfigurationManager.h"
 
 using namespace clap_metronome;
@@ -312,7 +313,9 @@ TEST_F(ConfigRangeValidationTest, OutputConfig_RejectsRelayPulseTooHigh) {
 
 TEST_F(ConfigRangeValidationTest, NetworkConfig_RejectsSSIDTooLong) {
     NetworkConfig network = config_->getNetworkConfig();
-    network.wifi_ssid = std::string(33, 'X');  // 33 chars, max is 32
+    std::string long_ssid(33, 'X');
+    strncpy(network.wifi_ssid, long_ssid.c_str(), sizeof(network.wifi_ssid) - 1);
+    network.wifi_ssid[sizeof(network.wifi_ssid) - 1] = '\0';  // 33 chars, max is 32
     
     EXPECT_FALSE(config_->setNetworkConfig(network));
     
@@ -322,15 +325,19 @@ TEST_F(ConfigRangeValidationTest, NetworkConfig_RejectsSSIDTooLong) {
 
 TEST_F(ConfigRangeValidationTest, NetworkConfig_AcceptsSSIDAtMaxLength) {
     NetworkConfig network = config_->getNetworkConfig();
-    network.wifi_ssid = std::string(32, 'X');  // 32 chars (max valid)
+    std::string max_ssid(32, 'X');
+    strncpy(network.wifi_ssid, max_ssid.c_str(), sizeof(network.wifi_ssid) - 1);
+    network.wifi_ssid[sizeof(network.wifi_ssid) - 1] = '\0';  // 32 chars (max valid)
     
     EXPECT_TRUE(config_->setNetworkConfig(network));
-    EXPECT_EQ(config_->getNetworkConfig().wifi_ssid.length(), 32);
+    EXPECT_EQ(strlen(config_->getNetworkConfig().wifi_ssid), 32UL);
 }
 
 TEST_F(ConfigRangeValidationTest, NetworkConfig_RejectsPasswordTooLong) {
     NetworkConfig network = config_->getNetworkConfig();
-    network.wifi_password = std::string(65, 'Y');  // 65 chars, max is 64
+    std::string long_pass(65, 'Y');
+    strncpy(network.wifi_password, long_pass.c_str(), sizeof(network.wifi_password) - 1);
+    network.wifi_password[sizeof(network.wifi_password) - 1] = '\0';  // 65 chars, max is 64
     
     EXPECT_FALSE(config_->setNetworkConfig(network));
     
@@ -340,7 +347,9 @@ TEST_F(ConfigRangeValidationTest, NetworkConfig_RejectsPasswordTooLong) {
 
 TEST_F(ConfigRangeValidationTest, NetworkConfig_RejectsMQTTUsernameTooLong) {
     NetworkConfig network = config_->getNetworkConfig();
-    network.mqtt_username = std::string(33, 'Z');  // 33 chars, max is 32
+    std::string long_user(33, 'Z');
+    strncpy(network.mqtt_username, long_user.c_str(), sizeof(network.mqtt_username) - 1);
+    network.mqtt_username[sizeof(network.mqtt_username) - 1] = '\0';  // 33 chars, max is 32
     
     EXPECT_FALSE(config_->setNetworkConfig(network));
     

@@ -65,7 +65,7 @@ TEST_F(RelayOutputTest, RelayInitialization_DefaultLowState) {
     // Verify stats show relay off
     RelayStats stats = controller->getRelayStats();
     EXPECT_FALSE(stats.currently_on);
-    EXPECT_EQ(stats.pulse_count, 0);
+    EXPECT_EQ(stats.pulse_count, 0U);
 }
 
 /**
@@ -286,16 +286,16 @@ TEST_F(RelayOutputTest, RelayStats_TrackPulseCount) {
     controller->resetRelayStats();
     
     RelayStats initial = controller->getRelayStats();
-    EXPECT_EQ(initial.pulse_count, 0);
-    EXPECT_EQ(initial.last_pulse_us, 0);
+    EXPECT_EQ(initial.pulse_count, 0U);
+    EXPECT_EQ(initial.last_pulse_us, 0ULL);
     
     // Send first pulse
     advance_time_us(1000000);  // 1 second
     controller->pulseRelay();
     
     RelayStats after_first = controller->getRelayStats();
-    EXPECT_EQ(after_first.pulse_count, 1);
-    EXPECT_GE(after_first.last_pulse_us, 1000000);
+    EXPECT_EQ(after_first.pulse_count, 1U);
+    EXPECT_GE(after_first.last_pulse_us, 1000000ULL);
     
     // Complete and send second pulse
     advance_time_us(60000);  // Complete pulse + debounce
@@ -362,5 +362,5 @@ TEST_F(RelayOutputTest, RelayOverride_ManualControl) {
     EXPECT_FALSE(controller->getRelayGPIO());
     
     RelayStats stats = controller->getRelayStats();
-    EXPECT_GT(stats.watchdog_triggers, 0);
+    EXPECT_GT(stats.watchdog_triggers, 0U);
 }

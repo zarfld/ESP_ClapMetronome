@@ -357,7 +357,7 @@ TEST_F(TimingManagerTest, BootInitialization_RepeatedInitSafe) {
     
     // Timestamps should still work
     uint64_t ts = timing_->getTimestampUs();
-    EXPECT_GT(ts, 0);
+    EXPECT_GT(ts, 0ULL);
 }
 
 /**

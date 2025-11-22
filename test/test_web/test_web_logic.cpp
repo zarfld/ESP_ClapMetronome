@@ -261,7 +261,7 @@ TEST_F(WebServerLogicTest, RateLimiting_ConfigurableInterval) {
     // Check 1Hz rate (1000ms intervals)
     for (size_t i = 1; i < broadcast_times.size(); i++) {
         uint64_t interval = broadcast_times[i] - broadcast_times[i-1];
-        EXPECT_GE(interval, 1000)
+        EXPECT_GE(interval, 1000ULL)
             << "1Hz rate limit violated: interval " << interval << "ms < 1000ms";
     }
 }
@@ -324,8 +324,8 @@ TEST_F(WebServerLogicTest, ErrorHandling_BufferOverflow) {
             << "Failed to queue message " << i << " (queue not full yet)";
     }
     
-    EXPECT_EQ(queue_->queueSize(), 5);
-    EXPECT_EQ(queue_->overflowCount(), 0);
+    EXPECT_EQ(queue_->queueSize(), 5UL);
+    EXPECT_EQ(queue_->overflowCount(), 0UL);
     
     // Try to add more messages (should overflow)
     for (int i = 5; i < 10; i++) {
