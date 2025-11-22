@@ -414,5 +414,5 @@ TEST_F(TimerClockTest, ClockCounter_Wraps24PPQN) {
     
     // Verify total clocks sent = 24
     TimerStats stats = controller->getTimerStats();
-    EXPECT_EQ(stats.clocks_sent, 24);
+    EXPECT_EQ(stats.clocks_sent, 24U);
 }

@@ -234,7 +234,7 @@ TEST_F(RelayOutputTest, RelayState_DisabledMode) {
     
     // Verify no pulse counted
     RelayStats stats = controller->getRelayStats();
-    EXPECT_EQ(stats.pulse_count, 0);
+    EXPECT_EQ(stats.pulse_count, 0U);
 }
 
 /**
