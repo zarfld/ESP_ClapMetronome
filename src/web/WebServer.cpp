@@ -26,18 +26,18 @@ namespace clap_metronome {
 // ============================================================================
 
 WebServer::WebServer(ConfigurationManager* config_manager, uint16_t port)
-    : config_manager_(config_manager)
-    , initialized_(false)
+    : initialized_(false)
     , running_(false)
+    , config_manager_(config_manager)
 {
     config_.port = port;
 }
 
 WebServer::WebServer(const WebServerConfig& config)
     : config_(config)
-    , config_manager_(nullptr)
     , initialized_(false)
     , running_(false)
+    , config_manager_(nullptr)
 {
 }
 
