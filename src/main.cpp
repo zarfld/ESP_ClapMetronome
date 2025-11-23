@@ -23,19 +23,27 @@
 // Core component headers (TDD-implemented modules)
 #include "timing/TimingManager.h"
 #include "audio/AudioDetection.h"
+#include "bpm/BPMCalculation.h"
+#include "output/OutputController.h"
+#include "config/ConfigurationManager.h"
+#include "web/WebServer.h"
+#include "mqtt/MQTTClient.h"
 
 // Platform-specific includes
 #if defined(ESP32)
   #include <WiFi.h>
-  #include <WebServer.h>
   #include <esp_task_wdt.h>
+  #include "soc/soc.h"
+  #include "soc/rtc_cntl_reg.h"
 #elif defined(ESP8266)
   #include <ESP8266WiFi.h>
-  #include <ESP8266WebServer.h>
 #endif
 
 // Library includes
 #include <Wire.h>
+
+// WiFi credentials (from credentials.h - gitignored)
+#include "../test/credentials.h"
 
 // Namespace
 using namespace clap_metronome;
@@ -46,6 +54,11 @@ using namespace clap_metronome;
 
 TimingManager timing_manager;
 AudioDetection audio_detection(&timing_manager);
+BPMCalculation bpm_calculation(&timing_manager);  // Requires ITimingProvider
+clap_metronome::ConfigurationManager config_manager;
+clap_metronome::WebServer web_server(&config_manager, 80);
+OutputController output_controller;
+clap_metronome::MQTTClient* mqtt_client = nullptr;  // Created after config load
 
 //==============================================================================
 // Configuration
@@ -82,6 +95,15 @@ GainLevel current_gain = GainLevel::GAIN_40DB;  // Default: 40dB (recommended)
 // Sample rate: 16kHz (62.5μs per sample)
 const uint32_t SAMPLE_INTERVAL_US = 62;
 uint64_t last_sample_time_us = 0;
+
+// WiFi connection state
+bool wifi_connected = false;
+uint32_t last_wifi_check = 0;
+const uint32_t WIFI_CHECK_INTERVAL_MS = 30000;  // Check every 30s
+
+// Telemetry timing
+uint32_t last_mqtt_publish = 0;
+const uint32_t MQTT_PUBLISH_INTERVAL_MS = 5000;  // Publish every 5s
 
 //==============================================================================
 // MAX9814 Gain Control
@@ -181,16 +203,72 @@ void autoAdjustGain(uint16_t peak_value, uint16_t avg_value) {
 }
 
 //==============================================================================
+// WiFi Connection Management
+//==============================================================================
+
+void connectWiFi() {
+  Serial.println("Connecting to WiFi...");
+  
+  // Enable WiFi power saving mode to reduce peak current draw
+  WiFi.mode(WIFI_STA);
+  delay(50);  // Let mode change stabilize
+  
+  WiFi.setSleep(true);  // Enable WiFi sleep mode to reduce power
+  WiFi.setTxPower(WIFI_POWER_11dBm);  // Reduce TX power (11dBm instead of default 20dBm)
+  
+  delay(100);  // Let power stabilize before connecting
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  
+  uint8_t attempts = 0;
+  const uint8_t MAX_ATTEMPTS = 40;  // 20 seconds timeout (longer with power saving)
+  
+  while (WiFi.status() != WL_CONNECTED && attempts < MAX_ATTEMPTS) {
+    delay(500);
+    Serial.print(".");
+    attempts++;
+  }
+  
+  if (WiFi.status() == WL_CONNECTED) {
+    wifi_connected = true;
+    Serial.println("\nWiFi connected!");
+    Serial.print("IP address: ");
+    Serial.println(WiFi.localIP());
+    Serial.print("Web UI: http://");
+    Serial.println(WiFi.localIP());
+  } else {
+    wifi_connected = false;
+    Serial.println("\nWiFi connection failed!");
+  }
+}
+
+void checkWiFiConnection() {
+  uint32_t now = millis();
+  if (now - last_wifi_check < WIFI_CHECK_INTERVAL_MS) {
+    return;
+  }
+  last_wifi_check = now;
+  
+  if (WiFi.status() != WL_CONNECTED) {
+    Serial.println("WiFi disconnected, reconnecting...");
+    wifi_connected = false;
+    connectWiFi();
+  }
+}
+
+//==============================================================================
 
 /**
  * Callback invoked when a beat is detected
  * 
  * Implements: AC-AUDIO-004 Beat Event Emission
- * Wave 3.8: Includes RTC timestamp
+ * Wave 3.8: Includes RTC timestamp, BPM calculation, output triggering
  */
 void onBeatDetected(const BeatEvent& event) {
     // Flash LED on beat
     digitalWrite(LED_PIN, LOW);
+    
+    // Add tap to BPM calculation
+    bpm_calculation.addTap(event.timestamp_us);
     
     // Get RTC timestamp if available
     if (timing_manager.rtcHealthy()) {
@@ -229,7 +307,7 @@ void onBeatDetected(const BeatEvent& event) {
  * Callback invoked every 500ms for telemetry
  * 
  * Implements: AC-AUDIO-007 Telemetry Updates
- * Wave 3.8: Enables auto-gain adjustment
+ * Wave 3.8: Enables auto-gain adjustment, MQTT publishing
  */
 void onTelemetry(const AudioTelemetry& telemetry) {
     Serial.print("Telemetry: ");
@@ -246,6 +324,33 @@ void onTelemetry(const AudioTelemetry& telemetry) {
     
     // Auto-adjust MAX9814 gain based on signal levels
     autoAdjustGain(telemetry.max_value, telemetry.adc_value);
+    
+    // Publish MQTT telemetry every 5 seconds
+    uint32_t now = millis();
+    if (mqtt_client && (now - last_mqtt_publish >= MQTT_PUBLISH_INTERVAL_MS)) {
+        last_mqtt_publish = now;
+        
+        // Get current BPM and stability
+        float current_bpm = bpm_calculation.getBPM();
+        bool is_stable = bpm_calculation.isStable();
+        uint8_t confidence = is_stable ? 95 : 50;
+        const char* lock_status = is_stable ? "LOCKED" : "UNLOCKED";
+        uint32_t timestamp = millis() / 1000;  // Convert to seconds
+        
+        // Publish BPM with full telemetry
+        mqtt_client->publishBPM(current_bpm, confidence, lock_status, timestamp);
+        
+        // Publish audio levels (requires max/min tracking)
+        static uint16_t max_level = 0;
+        static uint16_t min_level = 4095;
+        if (telemetry.adc_value > max_level) max_level = telemetry.adc_value;
+        if (telemetry.adc_value < min_level) min_level = telemetry.adc_value;
+        mqtt_client->publishAudioLevels(telemetry.adc_value, max_level, min_level, 
+                                       telemetry.threshold, telemetry.gain_level);
+        // Reset min/max for next interval
+        max_level = 0;
+        min_level = 4095;
+    }
 }
 
 //==============================================================================
@@ -311,6 +416,40 @@ void setup() {
         Serial.println("✗ Timing manager initialization FAILED");
     }
     
+    // Initialize configuration manager
+    Serial.println("Initializing configuration manager...");
+    if (config_manager.init()) {
+        Serial.println("✓ Configuration manager initialized");
+        if (config_manager.loadConfig()) {
+            Serial.println("✓ Configuration loaded from NVS");
+        } else {
+            Serial.println("⚠ Using default configuration");
+        }
+    } else {
+        Serial.println("✗ Configuration manager initialization FAILED");
+    }
+    
+    // Initialize BPM calculation
+    Serial.println("Initializing BPM calculation...");
+    bpm_calculation.init();
+    Serial.println("✓ BPM calculation initialized");
+    
+    // Initialize output controller
+    Serial.println("Initializing output controller...");
+    output_controller.init();
+    
+    // Get configuration and set output mode
+    clap_metronome::OutputConfig config_output = config_manager.getOutputConfig();
+    if (config_output.midi_enabled) {
+        output_controller.setBPM(120);  // Default BPM
+        output_controller.startSync();
+    }
+    Serial.println("✓ Output controller initialized");
+    Serial.print("  - MIDI enabled: ");
+    Serial.println(config_output.midi_enabled ? "yes" : "no");
+    Serial.print("  - Relay enabled: ");
+    Serial.println(config_output.relay_enabled ? "yes" : "no");
+    
     // Initialize audio detection
     Serial.println("Initializing audio detection...");
     if (audio_detection.init()) {
@@ -328,8 +467,56 @@ void setup() {
     audio_detection.onTelemetry(onTelemetry);
     Serial.println("✓ Callbacks registered");
     
+    // WiFi disabled - USB power insufficient for WiFi radio
+    Serial.println("⚠ WiFi disabled (requires external 5V/1A power supply)");
+    Serial.println("  Core features active: Beat detection, BPM, MIDI sync");
+    // connectWiFi();
+    
+    // Skip web server and MQTT when WiFi is disabled
+    /*
+    // Initialize and start web server if WiFi connected
+    if (wifi_connected) {
+        Serial.println("Initializing web server...");
+        if (web_server.init()) {
+            web_server.start();
+            Serial.println("✓ Web server started on port 80");
+            Serial.print("  - Access Web UI at: http://");
+            Serial.println(WiFi.localIP());
+        } else {
+            Serial.println("✗ Web server initialization FAILED");
+        }
+    }
+    
+    // Initialize and connect MQTT client if WiFi connected
+    if (wifi_connected) {
+        clap_metronome::NetworkConfig network_config = config_manager.getNetworkConfig();
+        if (network_config.mqtt_enabled && strlen(network_config.mqtt_broker) > 0) {
+            Serial.println("Initializing MQTT client...");
+            
+            // Build MQTT config from NetworkConfig
+            static clap_metronome::MQTTConfig mqtt_config;
+            mqtt_config.enabled = network_config.mqtt_enabled;
+            mqtt_config.broker_host = network_config.mqtt_broker;
+            mqtt_config.broker_port = network_config.mqtt_port;
+            mqtt_config.username = network_config.mqtt_username;
+            mqtt_config.password = network_config.mqtt_password;
+            mqtt_config.device_id = "esp32-clap-metronome";  // TODO: Use chip ID
+            
+            mqtt_client = new clap_metronome::MQTTClient(&mqtt_config);
+            if (mqtt_client->connect()) {
+                Serial.println("✓ MQTT client connected");
+                // publishOnlineStatus is private, handled internally by connect()
+            } else {
+                Serial.println("✗ MQTT connection FAILED");
+            }
+        }
+    }
+    */
+    
     Serial.println("\n=== System Ready ===");
-    Serial.println("Listening for claps at 16kHz sample rate...\n");
+    Serial.println("Listening for claps at 16kHz sample rate...");
+    Serial.println("Ready for beat detection testing!");
+    Serial.println();
     
     // Initialize sample timing
     last_sample_time_us = timing_manager.getTimestampUs();
@@ -353,6 +540,25 @@ void loop() {
         // Process sample through audio detection engine
         audio_detection.processSample(adc_value);
     }
+    
+    // Update output controller with stable BPM
+    float current_bpm = bpm_calculation.getBPM();
+    bool is_stable = bpm_calculation.isStable();
+    if (is_stable && current_bpm > 0.0f) {
+        static float last_bpm_sent = 0.0f;
+        if (current_bpm != last_bpm_sent) {
+            output_controller.updateBPM((uint16_t)current_bpm);
+            last_bpm_sent = current_bpm;
+        }
+    }
+    
+    // Service MQTT client
+    if (mqtt_client) {
+        mqtt_client->loop();
+    }
+    
+    // WiFi disabled - skip periodic check
+    // checkWiFiConnection();
     
     // Turn off LED after beat (50ms delay)
     static uint64_t led_off_time = 0;

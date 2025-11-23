@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ESP Clap Metronome</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎵 ESP Clap Metronome</h1>
+            <p class="subtitle">Real-time Beat Detection & Synchronization</p>
+        </header>
+
+        <!-- Connection Status -->
+        <div class="status-bar">
+            <div class="status-item">
+                <span class="status-label">WiFi:</span>
+                <span id="wifi-status" class="status-value">Connected</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">WebSocket:</span>
+                <span id="ws-status" class="status-value disconnected">Disconnected</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Uptime:</span>
+                <span id="uptime" class="status-value">--:--:--</span>
+            </div>
+        </div>
+
+        <!-- Live Telemetry Dashboard -->
+        <div class="dashboard">
+            <div class="card bpm-card">
+                <h2>BPM Detection</h2>
+                <div class="bpm-display">
+                    <div class="bpm-value" id="bpm-value">--</div>
+                    <div class="bpm-unit">BPM</div>
+                </div>
+                <div class="lock-status" id="lock-status">
+                    <span class="lock-indicator"></span>
+                    <span class="lock-text">UNLOCKED</span>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat">
+                        <span class="stat-label">Confidence:</span>
+                        <span class="stat-value" id="confidence">--%</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">Beat Count:</span>
+                        <span class="stat-value" id="beat-count">0</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">False Positives:</span>
+                        <span class="stat-value" id="false-positives">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card audio-card">
+                <h2>Audio Signal</h2>
+                <div class="meter-container">
+                    <div class="meter-label">Current Level</div>
+                    <div class="meter">
+                        <div class="meter-fill" id="audio-level"></div>
+                        <div class="meter-threshold" id="threshold-marker"></div>
+                    </div>
+                    <div class="meter-values">
+                        <span id="audio-value">0</span>
+                        <span id="threshold-value">0</span>
+                    </div>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat">
+                        <span class="stat-label">Min:</span>
+                        <span class="stat-value" id="audio-min">0</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">Max:</span>
+                        <span class="stat-value" id="audio-max">0</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">Gain:</span>
+                        <span class="stat-value" id="gain-level">50dB</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card output-card">
+                <h2>Output Status</h2>
+                <div class="output-status">
+                    <div class="output-item">
+                        <span class="output-icon">🎹</span>
+                        <div class="output-info">
+                            <div class="output-name">MIDI Beat Clock</div>
+                            <div class="output-state" id="midi-state">STOPPED</div>
+                        </div>
+                    </div>
+                    <div class="output-item">
+                        <span class="output-icon">🔌</span>
+                        <div class="output-info">
+                            <div class="output-name">Relay Output</div>
+                            <div class="output-state" id="relay-state">OFF</div>
+                        </div>
+                    </div>
+                    <div class="output-item">
+                        <span class="output-icon">📡</span>
+                        <div class="output-info">
+                            <div class="output-name">MQTT Telemetry</div>
+                            <div class="output-state" id="mqtt-state">DISCONNECTED</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Configuration Panel -->
+        <div class="config-panel">
+            <div class="config-header">
+                <h2>⚙️ Configuration</h2>
+                <div class="config-actions">
+                    <button id="refresh-btn" class="btn btn-secondary">Refresh</button>
+                    <button id="save-btn" class="btn btn-primary">Save Changes</button>
+                    <button id="reset-btn" class="btn btn-danger">Factory Reset</button>
+                </div>
+            </div>
+
+            <div class="config-tabs">
+                <button class="tab-btn active" data-tab="audio">Audio</button>
+                <button class="tab-btn" data-tab="bpm">BPM</button>
+                <button class="tab-btn" data-tab="output">Output</button>
+                <button class="tab-btn" data-tab="network">Network</button>
+            </div>
+
+            <!-- Audio Config Tab -->
+            <div id="audio-tab" class="tab-content active">
+                <div class="form-group">
+                    <label for="sample-rate">Sample Rate (Hz)</label>
+                    <input type="number" id="sample-rate" min="8000" max="16000" step="1000" value="8000">
+                    <small>Valid: 8000-16000 Hz</small>
+                </div>
+                <div class="form-group">
+                    <label for="threshold-margin">Threshold Margin</label>
+                    <input type="number" id="threshold-margin" min="50" max="200" value="80">
+                    <small>Valid: 50-200 (higher = less sensitive)</small>
+                </div>
+                <div class="form-group">
+                    <label for="debounce-ms">Debounce (ms)</label>
+                    <input type="number" id="debounce-ms" min="20" max="100" value="50">
+                    <small>Valid: 20-100 ms</small>
+                </div>
+                <div class="form-group">
+                    <label for="gain-level">Gain Level (dB)</label>
+                    <select id="gain-level">
+                        <option value="40">40 dB (Loud environments)</option>
+                        <option value="50" selected>50 dB (Moderate)</option>
+                        <option value="60">60 dB (Quiet rooms)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="kick-only-mode">
+                        Kick-Only Filter (Bass drum only)
+                    </label>
+                </div>
+            </div>
+
+            <!-- BPM Config Tab -->
+            <div id="bpm-tab" class="tab-content">
+                <div class="form-group">
+                    <label for="min-bpm">Minimum BPM</label>
+                    <input type="number" id="min-bpm" min="30" max="100" value="40">
+                    <small>Valid: 30-100 BPM</small>
+                </div>
+                <div class="form-group">
+                    <label for="max-bpm">Maximum BPM</label>
+                    <input type="number" id="max-bpm" min="200" max="600" value="300">
+                    <small>Valid: 200-600 BPM</small>
+                </div>
+                <div class="form-group">
+                    <label for="stability-threshold">Stability Threshold (%)</label>
+                    <input type="number" id="stability-threshold" min="1" max="10" value="5">
+                    <small>Valid: 1-10% (coefficient of variation)</small>
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="tempo-correction" checked>
+                        Tempo Correction (Half/Double detection)
+                    </label>
+                </div>
+            </div>
+
+            <!-- Output Config Tab -->
+            <div id="output-tab" class="tab-content">
+                <h3>MIDI Output</h3>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="midi-enabled" checked>
+                        Enable MIDI Beat Clock
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label for="midi-channel">MIDI Channel</label>
+                    <input type="number" id="midi-channel" min="1" max="16" value="10">
+                    <small>Valid: 1-16 (10 = drums)</small>
+                </div>
+
+                <h3>Relay Output</h3>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="relay-enabled">
+                        Enable Relay Output
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label for="relay-pulse-ms">Relay Pulse Duration (ms)</label>
+                    <input type="number" id="relay-pulse-ms" min="10" max="500" value="50">
+                    <small>Valid: 10-500 ms</small>
+                </div>
+            </div>
+
+            <!-- Network Config Tab -->
+            <div id="network-tab" class="tab-content">
+                <h3>WiFi Settings</h3>
+                <div class="form-group">
+                    <label for="wifi-ssid">SSID</label>
+                    <input type="text" id="wifi-ssid" maxlength="32">
+                </div>
+                <div class="form-group">
+                    <label for="wifi-password">Password</label>
+                    <input type="password" id="wifi-password" maxlength="64">
+                    <small>Leave blank to keep current password</small>
+                </div>
+
+                <h3>MQTT Settings</h3>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="mqtt-enabled">
+                        Enable MQTT Telemetry
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label for="mqtt-broker">Broker Address</label>
+                    <input type="text" id="mqtt-broker" placeholder="192.168.1.100">
+                </div>
+                <div class="form-group">
+                    <label for="mqtt-port">Port</label>
+                    <input type="number" id="mqtt-port" min="1" max="65535" value="1883">
+                </div>
+                <div class="form-group">
+                    <label for="mqtt-user">Username (optional)</label>
+                    <input type="text" id="mqtt-user">
+                </div>
+                <div class="form-group">
+                    <label for="mqtt-password">Password (optional)</label>
+                    <input type="password" id="mqtt-password">
+                    <small>Leave blank to keep current password</small>
+                </div>
+                <div class="form-group">
+                    <label for="device-id">Device ID</label>
+                    <input type="text" id="device-id" maxlength="32" value="esp32-metronome">
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>ESP_ClapMetronome v0.3.8 | <a href="https://github.com/zarfld/ESP_ClapMetronome" target="_blank">GitHub</a></p>
+        </footer>
+    </div>
+
+    <script src="/app.js"></script>
+</body>
+</html>
