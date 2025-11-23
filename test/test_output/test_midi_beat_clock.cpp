@@ -310,7 +310,7 @@ TEST_F(MIDIBeatClockTest, ClockCounter_IncrementsCorrectly) {
     }
     
     // Then: Counter shows 24 clocks
-    EXPECT_EQ(controller->getOutputState().clocks_sent, 24);
+    EXPECT_EQ(controller->getOutputState().clocks_sent, 24U);
     
     // RED: This will FAIL until clocks_sent counter implemented
     // GREEN: Increment clocks_sent++ in sendMIDIClock()
@@ -327,13 +327,13 @@ TEST_F(MIDIBeatClockTest, StartMessage_ResetsClockCounter) {
     for (int i = 0; i < 100; i++) {
         controller->sendMIDIClock();
     }
-    EXPECT_EQ(controller->getOutputState().clocks_sent, 100);
+    EXPECT_EQ(controller->getOutputState().clocks_sent, 100U);
     
     // When: Send START again
     controller->sendMIDIStart();
     
     // Then: Counter reset to 0
-    EXPECT_EQ(controller->getOutputState().clocks_sent, 0);
+    EXPECT_EQ(controller->getOutputState().clocks_sent, 0U);
     
     // RED: This will FAIL until START reset logic implemented
     // GREEN: Add clocks_sent = 0 in sendMIDIStart()

@@ -65,7 +65,7 @@ TEST_F(RelayOutputTest, RelayInitialization_DefaultLowState) {
     // Verify stats show relay off
     RelayStats stats = controller->getRelayStats();
     EXPECT_FALSE(stats.currently_on);
-    EXPECT_EQ(stats.pulse_count, 0);
+    EXPECT_EQ(stats.pulse_count, 0U);
 }
 
 /**
@@ -87,7 +87,7 @@ TEST_F(RelayOutputTest, RelayPulse_ConfiguredDuration) {
     // Verify stats updated
     RelayStats stats_during = controller->getRelayStats();
     EXPECT_TRUE(stats_during.currently_on);
-    EXPECT_EQ(stats_during.pulse_count, 1);
+    EXPECT_EQ(stats_during.pulse_count, 1U);
     
     // Advance time by 49ms (still within pulse)
     advance_time_us(49000);
@@ -102,7 +102,7 @@ TEST_F(RelayOutputTest, RelayPulse_ConfiguredDuration) {
     // Verify stats show relay off
     RelayStats stats_after = controller->getRelayStats();
     EXPECT_FALSE(stats_after.currently_on);
-    EXPECT_EQ(stats_after.pulse_count, 1);
+    EXPECT_EQ(stats_after.pulse_count, 1U);
 }
 
 /**
@@ -200,8 +200,8 @@ TEST_F(RelayOutputTest, RelayDebounce_MinimumOffTime) {
     
     // Verify debounce reject counter
     RelayStats stats = controller->getRelayStats();
-    EXPECT_EQ(stats.debounce_rejects, 1);
-    EXPECT_EQ(stats.pulse_count, 1);  // Only first pulse counted
+    EXPECT_EQ(stats.debounce_rejects, 1U);
+    EXPECT_EQ(stats.pulse_count, 1U);  // Only first pulse counted
     
     // Advance past debounce period (10ms)
     advance_time_us(11000);
@@ -210,7 +210,7 @@ TEST_F(RelayOutputTest, RelayDebounce_MinimumOffTime) {
     result = controller->pulseRelay();
     EXPECT_TRUE(result);
     EXPECT_TRUE(controller->getRelayGPIO());
-    EXPECT_EQ(controller->getRelayStats().pulse_count, 2);
+    EXPECT_EQ(controller->getRelayStats().pulse_count, 2U);
 }
 
 /**
@@ -234,7 +234,7 @@ TEST_F(RelayOutputTest, RelayState_DisabledMode) {
     
     // Verify no pulse counted
     RelayStats stats = controller->getRelayStats();
-    EXPECT_EQ(stats.pulse_count, 0);
+    EXPECT_EQ(stats.pulse_count, 0U);
 }
 
 /**
@@ -268,9 +268,9 @@ TEST_F(RelayOutputTest, RelayMultiplePulses_Sequential) {
     
     // Verify all 5 pulses counted
     RelayStats stats = controller->getRelayStats();
-    EXPECT_EQ(stats.pulse_count, 5);
-    EXPECT_EQ(stats.watchdog_triggers, 0);
-    EXPECT_EQ(stats.debounce_rejects, 0);
+    EXPECT_EQ(stats.pulse_count, 5U);
+    EXPECT_EQ(stats.watchdog_triggers, 0U);
+    EXPECT_EQ(stats.debounce_rejects, 0U);
 }
 
 /**
@@ -286,16 +286,16 @@ TEST_F(RelayOutputTest, RelayStats_TrackPulseCount) {
     controller->resetRelayStats();
     
     RelayStats initial = controller->getRelayStats();
-    EXPECT_EQ(initial.pulse_count, 0);
-    EXPECT_EQ(initial.last_pulse_us, 0);
+    EXPECT_EQ(initial.pulse_count, 0U);
+    EXPECT_EQ(initial.last_pulse_us, 0ULL);
     
     // Send first pulse
     advance_time_us(1000000);  // 1 second
     controller->pulseRelay();
     
     RelayStats after_first = controller->getRelayStats();
-    EXPECT_EQ(after_first.pulse_count, 1);
-    EXPECT_GE(after_first.last_pulse_us, 1000000);
+    EXPECT_EQ(after_first.pulse_count, 1U);
+    EXPECT_GE(after_first.last_pulse_us, 1000000ULL);
     
     // Complete and send second pulse
     advance_time_us(60000);  // Complete pulse + debounce
@@ -305,7 +305,7 @@ TEST_F(RelayOutputTest, RelayStats_TrackPulseCount) {
     controller->pulseRelay();
     
     RelayStats after_second = controller->getRelayStats();
-    EXPECT_EQ(after_second.pulse_count, 2);
+    EXPECT_EQ(after_second.pulse_count, 2U);
     EXPECT_GT(after_second.last_pulse_us, after_first.last_pulse_us);
 }
 
@@ -362,5 +362,5 @@ TEST_F(RelayOutputTest, RelayOverride_ManualControl) {
     EXPECT_FALSE(controller->getRelayGPIO());
     
     RelayStats stats = controller->getRelayStats();
-    EXPECT_GT(stats.watchdog_triggers, 0);
+    EXPECT_GT(stats.watchdog_triggers, 0U);
 }

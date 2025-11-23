@@ -127,7 +127,7 @@ TEST_F(PerformanceTest, MidiClockJitter_Under1ms) {
     
     // Verify reasonable mean interval (should be ~20833µs at 120 BPM, 24 PPQN)
     uint32_t expected_interval = controller->calculateTimerInterval(120, 24);
-    EXPECT_GT(timestamps.size(), 1);
+    EXPECT_GT(timestamps.size(), 1UL);
     if (timestamps.size() > 1) {
         uint64_t measured_interval = (timestamps.back() - timestamps.front()) / (timestamps.size() - 1);
         EXPECT_NEAR(static_cast<double>(measured_interval), static_cast<double>(expected_interval), 1000.0);  // Within 1ms
@@ -443,10 +443,10 @@ TEST_F(PerformanceTest, MemoryStability_NoLeaks) {
     
     // Verify system still responsive
     MidiStats stats = controller->getMidiStats();
-    EXPECT_GT(stats.clock_messages_sent, 0);
+    EXPECT_GT(stats.clock_messages_sent, 0U);
     
     TimerStats timer_stats = controller->getTimerStats();
-    EXPECT_GT(timer_stats.callbacks_processed, 0);
+    EXPECT_GT(timer_stats.callbacks_processed, 0U);
 }
 
 /**

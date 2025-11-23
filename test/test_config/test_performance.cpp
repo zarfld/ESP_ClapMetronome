@@ -167,7 +167,7 @@ TEST_F(ConfigPerformanceTest, MemoryFootprint_WithinBudget) {
     // Target: <1,956B RAM (from phase 04 design)
     size_t footprint = calculateMemoryFootprint();
     
-    EXPECT_LT(footprint, 1956) << "Memory footprint exceeds budget: " << footprint << " bytes";
+    EXPECT_LT(footprint, 1956UL) << "Memory footprint exceeds budget: " << footprint << " bytes";
     
     std::cout << "Configuration memory footprint: " << footprint << " bytes" << std::endl;
     std::cout << "  AudioConfig:   " << sizeof(AudioConfig) << " bytes" << std::endl;
@@ -382,7 +382,7 @@ TEST_F(ConfigPerformanceTest, Stress_NotificationOverhead) {
     // Notifications should have minimal overhead
     int callback_count = 0;
     
-    config_->onConfigChange([&callback_count](const ConfigChangeEvent& event) {
+    config_->onConfigChange([&callback_count](const ConfigChangeEvent&) {
         callback_count++;
     });
     
