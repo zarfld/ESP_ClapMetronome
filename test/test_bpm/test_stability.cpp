@@ -287,3 +287,83 @@ TEST_F(BPMStabilityTest, FullBuffer_ConsistentIntervals_RemainsStable) {
     EXPECT_LT(bpm_->getCoefficientOfVariation(), 1.0f)
         << "CV should be very low with perfect intervals";
 }
+
+/**
+ * @brief Real-world test: 92 BPM with subdivisions (captured from hardware)
+ * 
+ * Test: Replay actual clapping rhythm at 92 BPM including all imperfections
+ * Expected: System detects ~92 BPM despite subdivisions and timing variations
+ * 
+ * Data source: ESP32 serial output from 2025-11-24 07:18:13-07:18:27
+ * User was clapping at 92 BPM but system detected on both downbeats and upbeats
+ * 
+ * Key characteristics:
+ * - Mix of quarter notes (~650ms) and eighth notes (~325ms)
+ * - Timing variations: 207ms to 651ms range
+ * - System should normalize subdivisions to detect base tempo
+ * 
+ * Acceptance: BPM = 92 ± 5 BPM
+ */
+TEST_F(BPMStabilityTest, RealWorld_92BPM_WithSubdivisions) {
+    // Arrange: Real intervals captured from hardware (milliseconds converted to microseconds)
+    // This is a complete rhythm sequence including all messy subdivisions
+    uint64_t real_intervals[] = {
+        363000,  // 363ms - near quarter note
+        288000,  // 288ms - subdivision
+        651000,  // 651ms - QUARTER NOTE (target tempo)
+        340000,  // 340ms - subdivision
+        207000,  // 207ms - subdivision
+        218000,  // 218ms - subdivision
+        415000,  // 415ms - subdivision
+        547000,  // 547ms - close to quarter note
+        518000,  // 518ms - subdivision
+        60000,   // 60ms - possible false positive
+        75000,   // 75ms - possible double-tap
+        93000,   // 93ms - subdivision
+        352000,  // 352ms - subdivision
+        529000,  // 529ms - close to quarter note
+        60000,   // 60ms - subdivision/noise
+        104000,  // 104ms - subdivision
+        320000,  // 320ms - subdivision
+        180000,  // 180ms - subdivision
+        65000,   // 65ms - subdivision
+        137000,  // 137ms - subdivision
+        141000,  // 141ms - subdivision
+        325000,  // 325ms - subdivision (half tempo)
+        301000,  // 301ms - subdivision
+        437000,  // 437ms - close to quarter note
+        315000,  // 315ms - subdivision
+        327000,  // 327ms - subdivision
+        212000,  // 212ms - subdivision
+        351000,  // 351ms - subdivision
+        411000,  // 411ms - subdivision
+        231000,  // 231ms - subdivision
+        111000,  // 111ms - subdivision
+        // More intervals from the continuous rhythm
+        697000,  // 697ms - long pause between phrases
+        204000,  // 204ms - subdivision
+        324000,  // 324ms - subdivision
+        312000,  // 312ms - subdivision
+        363000,  // 363ms - subdivision
+        289000,  // 289ms - subdivision
+        311000   // 311ms - subdivision
+    };
+    constexpr int TAP_COUNT = sizeof(real_intervals) / sizeof(real_intervals[0]) + 1;
+
+    // Act: Feed the real rhythm into the BPM calculator
+    addTapsWithVariableIntervals(real_intervals, TAP_COUNT);
+
+    // Assert: Should detect base tempo around 92 BPM
+    float detected_bpm = bpm_->getBPM();
+    EXPECT_NEAR(detected_bpm, 92.0f, 5.0f)
+        << "Should detect 92 BPM despite subdivisions (detected: " 
+        << detected_bpm << " BPM)";
+    
+    // CV will be high due to subdivisions, but algorithm should normalize
+    float cv = bpm_->getCoefficientOfVariation();
+    EXPECT_GT(cv, 0.0f) 
+        << "CV should be calculated with real rhythm";
+    
+    // With subdivision detection, the normalized intervals should show stability
+    // Note: This test validates the algorithm handles real-world complexity
+}

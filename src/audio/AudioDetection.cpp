@@ -363,23 +363,48 @@ void AudioDetection::publishTelemetry(uint64_t timestamp_us, uint16_t current_ad
 }
 
 void AudioDetection::updateAGC(uint16_t adc_value) {
-    // AC-AUDIO-003: AGC Level Transitions
-    // Detect clipping and reduce gain to prevent saturation
+    // AC-AUDIO-003: AGC Level Transitions (Bidirectional)
+    // Decrease gain on clipping, increase gain when signal too weak
+    
+    uint64_t now_us = timing_->getTimestampUs();
     
     // Check if sample exceeds clipping threshold (4000 ADC units)
     if (adc_value > AudioDetectionState::CLIPPING_THRESHOLD) {
-        // Clipping detected - set flag
+        // Clipping detected - immediately reduce gain
         state_.clipping_detected = true;
         
         // Reduce gain level (if not already at minimum)
         if (state_.gain_level == AGCLevel::GAIN_60DB) {
-            // Reduce from 60dB to 50dB
             state_.gain_level = AGCLevel::GAIN_50DB;
+            state_.last_gain_change_us = now_us;
         } else if (state_.gain_level == AGCLevel::GAIN_50DB) {
-            // Reduce from 50dB to 40dB
             state_.gain_level = AGCLevel::GAIN_40DB;
+            state_.last_gain_change_us = now_us;
         }
         // If already at GAIN_40DB (minimum), stay there
+        state_.weak_signal_counter = 0;  // Reset weak signal tracking
+    }
+    // Check for weak signal conditions (no beats + low ADC range)
+    else if (state_.max_value < AudioDetectionState::WEAK_SIGNAL_THRESHOLD) {
+        // Signal is weak - check if enough time passed since last gain change
+        uint64_t time_since_change = (state_.last_gain_change_us == 0) ? 
+                                      now_us : 
+                                      (now_us - state_.last_gain_change_us);
+        
+        if (time_since_change >= AudioDetectionState::AGC_INCREASE_DELAY_US) {
+            // 5 seconds of weak signal - increase gain if not at maximum
+            if (state_.gain_level == AGCLevel::GAIN_40DB) {
+                state_.gain_level = AGCLevel::GAIN_50DB;
+                state_.last_gain_change_us = now_us;
+            } else if (state_.gain_level == AGCLevel::GAIN_50DB) {
+                state_.gain_level = AGCLevel::GAIN_60DB;
+                state_.last_gain_change_us = now_us;
+            }
+            // If already at GAIN_60DB (maximum), stay there
+        }
+    } else {
+        // Signal strength is adequate - reset weak signal counter
+        state_.weak_signal_counter = 0;
     }
 }
 

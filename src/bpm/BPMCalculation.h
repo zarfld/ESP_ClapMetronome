@@ -103,9 +103,22 @@ public:
     
     /**
      * Get current BPM value
+     * Returns locked BPM when stable, otherwise calculated BPM
      * @return BPM (0.0 if <2 taps)
      */
     float getBPM() const;
+    
+    /**
+     * Get locked/stable BPM (metronome tempo)
+     * @return Locked BPM (0.0 if not yet locked)
+     */
+    float getLockedBPM() const;
+    
+    /**
+     * Get calculated BPM (may vary)
+     * @return Current calculated BPM (0.0 if <2 taps)
+     */
+    float getCalculatedBPM() const;
     
     /**
      * Check if BPM is stable
@@ -124,6 +137,28 @@ public:
      * @return CV percentage (0-100%)
      */
     float getCoefficientOfVariation() const;
+    
+    /**
+     * Get relative deviation from locked tempo
+     * Shows timing accuracy when tempo is locked
+     * @return Deviation percentage (0-100%, 0 when not locked)
+     */
+    float getRelativeDeviation() const;
+    
+    /**
+     * Get stable count for debugging
+     * When not locked: counts consecutive stable readings (increments to 3+)
+     * When locked: counts remaining deviation tolerance (decrements from 5 to 0)
+     * @return Current stable_count value
+     */
+    uint8_t getStableCount() const;
+    
+    /**
+     * Check for lock timeout and unlock if no beats for 3 seconds
+     * MUST be called periodically (e.g., every 500ms) to detect stale locks
+     * @param current_time_us Current timestamp in microseconds
+     */
+    void checkTimeout(uint64_t current_time_us);
     
     /**
      * Register callback for BPM updates
@@ -189,6 +224,33 @@ private:
      * Fire BPM update callback
      */
     void fireBPMUpdateCallback();
+    
+    // ===== Shadow Tracker (Parallel Tempo Detection) =====
+    
+    /**
+     * Update shadow tracker with new tap
+     * Runs in parallel with primary tracker for tempo change detection
+     * @param timestamp_us New tap timestamp
+     */
+    void updateShadowTracker(uint64_t timestamp_us);
+    
+    /**
+     * Calculate shadow BPM from shadow buffer
+     * Uses simplified algorithm for faster response
+     */
+    void calculateShadowBPM();
+    
+    /**
+     * Check if shadow tracker should replace primary locked tempo
+     * @return true if shadow tracker is more confident and tempo differs
+     */
+    bool shouldSwitchTempo();
+    
+    /**
+     * Switch to shadow tracker's tempo
+     * Replaces locked tempo with shadow tempo and resets confidence
+     */
+    void switchToShadowTempo();
 };
 
 #endif // BPM_CALCULATION_H

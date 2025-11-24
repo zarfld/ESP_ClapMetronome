@@ -71,6 +71,8 @@ struct AudioDetectionState {
     // AGC State (AC-AUDIO-003, AC-AUDIO-012)
     AGCLevel gain_level;                ///< Current MAX9814 gain level
     bool     clipping_detected;         ///< True if recent sample >4000 (clipping)
+    uint64_t last_gain_change_us;       ///< Timestamp of last AGC gain adjustment
+    uint8_t  weak_signal_counter;       ///< Counter for consecutive weak signal periods
     
     // Beat Detection Metrics
     uint32_t beat_count;                ///< Total beats detected since boot
@@ -96,9 +98,12 @@ struct AudioDetectionState {
     
     // Constants for detection algorithm
     static constexpr uint16_t CLIPPING_THRESHOLD = 4000;  ///< ADC value indicating clipping (12-bit max = 4095)
-    static constexpr uint64_t DEBOUNCE_PERIOD_US = 50000; ///< 50ms debounce (AC-AUDIO-005)
+    static constexpr uint16_t WEAK_SIGNAL_THRESHOLD = 2000; ///< Max ADC range indicating weak signal
+    static constexpr uint64_t AGC_INCREASE_DELAY_US = 5000000; ///< 5s delay before increasing gain
+    static constexpr uint64_t DEBOUNCE_PERIOD_US = 50000; ///< 50ms debounce (AC-AUDIO-005) - allows 32nd notes at fast tempos while filtering electrical noise
     static constexpr uint64_t TELEMETRY_INTERVAL_US = 500000; ///< 500ms telemetry (AC-AUDIO-007)
-    static constexpr uint64_t KICK_RISE_TIME_US = 4000;   ///< 4ms rise time for kick detection (AC-AUDIO-006)
+    static constexpr uint64_t KICK_RISE_TIME_US = 2000;   ///< 2ms rise time for kick/snare detection (AC-AUDIO-006)
+    // Kicks/snares: 2-8ms attack, Hi-hats/cymbals: <1ms attack
     static constexpr float    THRESHOLD_FACTOR = 0.8f;    ///< Adaptive threshold factor (AC-AUDIO-001)
     static constexpr uint16_t THRESHOLD_MARGIN = 80;      ///< Hysteresis margin above threshold (AC-AUDIO-009)
     static constexpr uint16_t MIN_SIGNAL_AMPLITUDE = 200; ///< Minimum signal amplitude for valid beat (AC-AUDIO-009)
@@ -116,18 +121,21 @@ struct AudioDetectionState {
         beat_count = 0;
         false_positive_count = 0;
         last_beat_timestamp_us = 0;
+        last_gain_change_us = 0;
+        weak_signal_counter = 0;
         rising_edge_start_us = 0;
         rising_edge_start_value = 0;
         rising_edge_peak_value = 0;
         last_telemetry_us = 0;
         window_index = 0;
         window_count = 0;  // No samples yet
-        noise_floor = 100;  // Initial noise floor estimate
+        noise_floor = 2000;  // Initial noise floor estimate (12-bit ADC midpoint)
         samples_since_noise_update = 0;
-        // Initialize window with zeros for clean initial state
-        // Min/max will be calculated from actual samples as they arrive
+        // Initialize window with ADC midpoint to prevent false triggers during startup
+        // Using 2000 (approx 12-bit ADC midpoint) instead of 0 to avoid artificially
+        // low noise floor calculation that causes false positive detections
         for (size_t i = 0; i < WINDOW_SIZE; i++) {
-            window_samples[i] = 0;
+            window_samples[i] = 2000;  // 12-bit ADC midpoint
         }
     }
     

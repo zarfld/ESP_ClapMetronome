@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 if(MSVC)
-    add_compile_options(/W4 /WX)  # Warning level 4, treat warnings as errors
+    add_compile_options(/W4 /WX /wd4127)  # Warning level 4, treat warnings as errors, except C4127 (constant conditional)
 else()
     add_compile_options(-Wall -Wextra -Werror -O0 -ggdb)
 endif()

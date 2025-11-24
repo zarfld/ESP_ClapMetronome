@@ -267,8 +267,12 @@ void onBeatDetected(const BeatEvent& event) {
     // Flash LED on beat
     digitalWrite(LED_PIN, LOW);
     
-    // Add tap to BPM calculation
-    bpm_calculation.addTap(event.timestamp_us);
+    // Add tap to BPM calculation ONLY for kick/snare beats (rise_time > 4ms)
+    // This filters out hi-hats and cymbals which have faster attack
+    // and prevents tempo inflation from 8th/16th note subdivisions
+    if (event.kick_only) {
+        bpm_calculation.addTap(event.timestamp_us);
+    }
     
     // Get RTC timestamp if available
     if (timing_manager.rtcHealthy()) {
@@ -294,7 +298,13 @@ void onBeatDetected(const BeatEvent& event) {
     Serial.print(", gain=");
     Serial.print(event.gain_level);
     Serial.print(", kick_only=");
-    Serial.println(event.kick_only);
+    Serial.print(event.kick_only);
+    
+    // Indicate if beat was used for BPM calculation
+    if (event.kick_only) {
+        Serial.print(" [BPM]");
+    }
+    Serial.println();
     
     // LED will turn off after 50ms in main loop
 }
@@ -310,6 +320,14 @@ void onBeatDetected(const BeatEvent& event) {
  * Wave 3.8: Enables auto-gain adjustment, MQTT publishing
  */
 void onTelemetry(const AudioTelemetry& telemetry) {
+    // Check for BPM lock timeout (unlock if no beats for 3 seconds)
+    bpm_calculation.checkTimeout(timing_manager.getTimestampUs());
+    
+    // Get locked and calculated BPM for display
+    float locked_bpm = bpm_calculation.getLockedBPM();
+    float calculated_bpm = bpm_calculation.getCalculatedBPM();
+    bool is_stable = bpm_calculation.isStable();
+    
     Serial.print("Telemetry: ");
     Serial.print("ADC=");
     Serial.print(telemetry.adc_value);
@@ -320,7 +338,43 @@ void onTelemetry(const AudioTelemetry& telemetry) {
     Serial.print(", FP=");
     Serial.print(telemetry.false_positive_count);
     Serial.print(", gain=");
-    Serial.println(telemetry.gain_level);
+    Serial.print(telemetry.gain_level);
+    
+    // Add BPM information to telemetry output
+    if (locked_bpm > 0) {
+        // Show locked metronome tempo
+        Serial.print(", BPM=");
+        Serial.print(locked_bpm, 1);
+        Serial.print(" [LOCKED]");
+        
+        // Show calculated BPM if significantly different (for debugging)
+        if (calculated_bpm > 0) {
+            float deviation = (calculated_bpm > locked_bpm) 
+                             ? (calculated_bpm - locked_bpm) 
+                             : (locked_bpm - calculated_bpm);
+            float percent_dev = (deviation / locked_bpm) * 100.0f;
+            
+            if (percent_dev > 3.0f) {  // Show if >3% deviation
+                Serial.print(" (calc=");
+                Serial.print(calculated_bpm, 1);
+                Serial.print(")");
+            }
+        }
+    } else if (calculated_bpm > 0) {
+        // No locked tempo yet - show calculated BPM
+        Serial.print(", BPM=");
+        Serial.print(calculated_bpm, 1);
+        Serial.print(is_stable ? " [locking...]" : " [tracking]");
+        
+        // Show CV and stable count for debugging
+        float cv = bpm_calculation.getCoefficientOfVariation();
+        uint8_t stable_cnt = bpm_calculation.getStableCount();
+        Serial.print(" CV=");
+        Serial.print(cv, 1);
+        Serial.print("% sc=");
+        Serial.print(stable_cnt);
+    }
+    Serial.println();
     
     // Auto-adjust MAX9814 gain based on signal levels
     autoAdjustGain(telemetry.max_value, telemetry.adc_value);
